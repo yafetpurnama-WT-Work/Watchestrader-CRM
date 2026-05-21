@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('automation_logs', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->foreignUuid('automation_id')->constrained('automations')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('contact_id')->nullable()->constrained('contacts')->nullOnDelete();
+            $table->string('trigger_event');
+            $table->json('steps_executed')->nullable();
+            $table->string('status')->default('success');
+            $table->text('error_message')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('automation_logs');
+    }
+};
