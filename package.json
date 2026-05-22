@@ -45,7 +45,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
+    "date-fns": "^4.2.1",
     "lucide-react": "^1.8.0",
     "next": "16.2.6",
     "react": "19.2.4",
