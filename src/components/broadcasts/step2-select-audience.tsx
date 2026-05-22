@@ -1,0 +1,444 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { tags as tagsApi, customFields as customFieldsApi, contacts as contactsApi } from '@/lib/api';
+import { CustomField, Tag } from '@/types';
+import { Button } from '@/components/ui/button';
+import {
+  Users,
+  Tags,
+  Filter,
+  Upload,
+  Loader2,
+  ArrowRight,
+  ArrowLeft,
+  X,
+} from 'lucide-react';
+
+type AudienceType = 'all' | 'tags' | 'custom_field' | 'csv';
+type CustomFieldOperator = 'is' | 'is_not' | 'contains';
+
+interface CustomFieldFilter {
+  fieldId: string;
+  operator: CustomFieldOperator;
+  value: string;
+}
+
+interface AudienceConfig {
+  type: AudienceType;
+  tagIds?: string[];
+  customField?: CustomFieldFilter;
+  csvContacts?: { phone: string; name?: string }[];
+  excludeTagIds?: string[];
+}
+
+interface Step2Props {
+  audience: AudienceConfig;
+  onUpdate: (audience: AudienceConfig) => void;
+  onNext: () => void;
+  onBack: () => void;
+}
+
+const audienceOptions: {
+  type: AudienceType;
+  label: string;
+  description: string;
+  icon: typeof Users;
+}[] = [
+  {
+    type: 'all',
+    label: 'All Contacts',
+    description: 'Send to every contact in your database',
+    icon: Users,
+  },
+  {
+    type: 'tags',
+    label: 'Filter by Tags',
+    description: 'Target contacts with specific tags',
+    icon: Tags,
+  },
+  {
+    type: 'custom_field',
+    label: 'Custom Field',
+    description: 'Filter by a custom field value',
+    icon: Filter,
+  },
+  {
+    type: 'csv',
+    label: 'Upload CSV',
+    description: 'Upload a list of phone numbers',
+    icon: Upload,
+  },
+];
+
+const OPERATOR_OPTIONS: { value: CustomFieldOperator; label: string }[] = [
+  { value: 'is', label: 'is' },
+  { value: 'is_not', label: 'is not' },
+  { value: 'contains', label: 'contains' },
+];
+
+export function Step2SelectAudience({
+  audience,
+  onUpdate,
+  onNext,
+  onBack,
+}: Step2Props) {
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [loadingTags, setLoadingTags] = useState(false);
+  const [loadingFields, setLoadingFields] = useState(false);
+  const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
+  const [loadingCount, setLoadingCount] = useState(false);
+
+  // Tags are used both by the primary "Filter by Tags" audience type
+  // AND by the exclude-list below — so always load once on mount.
+  useEffect(() => {
+    async function fetchTags() {
+      setLoadingTags(true);
+      try {
+        const res = await tagsApi.list();
+        setTags(res.data?.data || res.data || []);
+      } catch (err) {
+        console.error("Failed to load tags:", err);
+      } finally {
+        setLoadingTags(false);
+      }
+    }
+    fetchTags();
+  }, []);
+
+  // Lazy-load custom fields only when that audience type is active.
+  useEffect(() => {
+    if (audience.type !== 'custom_field') return;
+    async function fetchFields() {
+      setLoadingFields(true);
+      try {
+        const res = await customFieldsApi.list();
+        setCustomFields(res.data?.data || res.data || []);
+      } catch (err) {
+        console.error("Failed to load fields:", err);
+      } finally {
+        setLoadingFields(false);
+      }
+    }
+    fetchFields();
+  }, [audience.type]);
+
+  const fetchEstimatedCount = useCallback(async () => {
+    setLoadingCount(true);
+    try {
+      const res = await contactsApi.list();
+      let contacts = res.data?.data || res.data || [];
+      if (!Array.isArray(contacts)) contacts = [];
+
+      let filtered = contacts;
+
+      if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
+        filtered = filtered.filter((c: any) =>
+          c.tags?.some((t: any) => audience.tagIds!.includes(t.id))
+        );
+      } else if (
+        audience.type === 'custom_field' &&
+        audience.customField?.fieldId &&
+        audience.customField.value
+      ) {
+        const { fieldId, operator, value } = audience.customField;
+        filtered = filtered.filter((c: any) => {
+          const cv = c.customValues?.find((v: any) => v.custom_field_id === fieldId);
+          if (!cv) return false;
+          if (operator === 'is') return cv.value === value;
+          if (operator === 'is_not') return cv.value !== value;
+          return cv.value.toLowerCase().includes(value.toLowerCase());
+        });
+      } else if (audience.type === 'csv' && audience.csvContacts && audience.csvContacts.length > 0) {
+        setEstimatedCount(audience.csvContacts.length);
+        return;
+      } else if (audience.type !== 'all') {
+        setEstimatedCount(null);
+        return;
+      }
+
+      if (audience.excludeTagIds && audience.excludeTagIds.length > 0) {
+        filtered = filtered.filter(
+          (c: any) => !c.tags?.some((t: any) => audience.excludeTagIds!.includes(t.id))
+        );
+      }
+
+      setEstimatedCount(filtered.length);
+    } catch (err) {
+      console.error("Failed to estimate count:", err);
+      setEstimatedCount(0);
+    } finally {
+      setLoadingCount(false);
+    }
+  }, [
+    audience.type,
+    audience.tagIds,
+    audience.customField,
+    audience.csvContacts,
+    audience.excludeTagIds,
+  ]);
+
+  useEffect(() => {
+    fetchEstimatedCount();
+  }, [fetchEstimatedCount]);
+
+  function toggleTag(tagId: string) {
+    const current = audience.tagIds ?? [];
+    const updated = current.includes(tagId)
+      ? current.filter((id) => id !== tagId)
+      : [...current, tagId];
+    onUpdate({ ...audience, tagIds: updated });
+  }
+
+  function toggleExcludeTag(tagId: string) {
+    const current = audience.excludeTagIds ?? [];
+    const updated = current.includes(tagId)
+      ? current.filter((id) => id !== tagId)
+      : [...current, tagId];
+    onUpdate({ ...audience, excludeTagIds: updated });
+  }
+
+  function updateCustomField(patch: Partial<CustomFieldFilter>) {
+    const prev = audience.customField ?? {
+      fieldId: '',
+      operator: 'is' as CustomFieldOperator,
+      value: '',
+    };
+    onUpdate({ ...audience, customField: { ...prev, ...patch } });
+  }
+
+  const isValid =
+    audience.type === 'all' ||
+    (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) ||
+    (audience.type === 'custom_field' &&
+      !!audience.customField?.fieldId &&
+      audience.customField.value.length > 0) ||
+    (audience.type === 'csv' &&
+      audience.csvContacts &&
+      audience.csvContacts.length > 0);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-white">Select Audience</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Choose who will receive this broadcast.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {audienceOptions.map((option) => {
+          const isSelected = audience.type === option.type;
+          const Icon = option.icon;
+          return (
+            <button
+              key={option.type}
+              onClick={() =>
+                onUpdate({
+                  ...audience,
+                  type: option.type,
+                  // Wipe shape fields from other types to avoid stale
+                  // config leaking across selections.
+                  tagIds: option.type === 'tags' ? audience.tagIds : undefined,
+                  customField:
+                    option.type === 'custom_field'
+                      ? audience.customField
+                      : undefined,
+                  csvContacts:
+                    option.type === 'csv' ? audience.csvContacts : undefined,
+                })
+              }
+              className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
+                isSelected
+                  ? 'border-violet-500 bg-violet-500/5 ring-1 ring-violet-500/30'
+                  : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
+              }`}
+            >
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  isSelected
+                    ? 'bg-violet-500/10 text-violet-400'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">{option.label}</p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {option.description}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {audience.type === 'tags' && (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+          <p className="mb-3 text-sm font-medium text-white">Select Tags</p>
+          {loadingTags ? (
+            <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+          ) : tags.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              No tags found. Create tags in Settings.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => {
+                const isSelected = audience.tagIds?.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleTag(tag.id)}
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                      isSelected
+                        ? 'border-violet-500/30 bg-violet-500/10 text-violet-400'
+                        : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
+                    }`}
+                  >
+                    <span
+                      className="mr-1.5 h-2 w-2 rounded-full"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {audience.type === 'custom_field' && (
+        <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+          <p className="text-sm font-medium text-white">Custom Field Filter</p>
+          {loadingFields ? (
+            <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+          ) : customFields.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              No custom fields defined. Create one in Settings → Custom Fields.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_minmax(0,1fr)]">
+              <select
+                value={audience.customField?.fieldId ?? ''}
+                onChange={(e) => updateCustomField({ fieldId: e.target.value })}
+                className="h-9 rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              >
+                <option value="">Select field…</option>
+                {customFields.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.field_name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={audience.customField?.operator ?? 'is'}
+                onChange={(e) =>
+                  updateCustomField({
+                    operator: e.target.value as CustomFieldOperator,
+                  })
+                }
+                className="h-9 rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              >
+                {OPERATOR_OPTIONS.map((op) => (
+                  <option key={op.value} value={op.value}>
+                    {op.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={audience.customField?.value ?? ''}
+                onChange={(e) => updateCustomField({ value: e.target.value })}
+                placeholder="Value"
+                className="h-9 rounded-lg border border-slate-700 bg-slate-800 px-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Exclude list — applies regardless of audience type */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <X className="h-4 w-4 text-red-400" />
+          <p className="text-sm font-medium text-white">
+            Exclude contacts with these tags
+          </p>
+          <span className="text-xs text-slate-500">(optional)</span>
+        </div>
+        {tags.length === 0 ? (
+          <p className="text-xs text-slate-500">No tags available.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => {
+              const isExcluded = audience.excludeTagIds?.includes(tag.id);
+              return (
+                <button
+                  key={tag.id}
+                  onClick={() => toggleExcludeTag(tag.id)}
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                    isExcluded
+                      ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                      : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
+                  }`}
+                >
+                  <span
+                    className="mr-1.5 h-2 w-2 rounded-full"
+                    style={{ backgroundColor: tag.color }}
+                  />
+                  {tag.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Audience Summary */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+        <p className="mb-2 text-sm font-medium text-white">Audience Summary</p>
+        {loadingCount ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+            <span className="text-xs text-slate-400">Calculating…</span>
+          </div>
+        ) : estimatedCount !== null ? (
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-violet-400" />
+            <span className="text-sm text-white">
+              {estimatedCount.toLocaleString()}
+            </span>
+            <span className="text-xs text-slate-400">estimated recipients</span>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">
+            Select an audience type to see the estimate.
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between border-t border-slate-800 pt-4">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="border-slate-700 text-slate-300"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <Button
+          onClick={onNext}
+          disabled={!isValid}
+          className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+        >
+          Next
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
