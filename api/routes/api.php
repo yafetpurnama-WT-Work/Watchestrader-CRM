@@ -16,6 +16,17 @@ use App\Http\Controllers\Api\DealController;
 use App\Http\Controllers\Api\BroadcastController;
 use App\Http\Controllers\Api\AutomationController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\LeadController;
+use App\Http\Controllers\Api\SubLeadController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\OutletController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\MasterDataController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,24 +53,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
-    // Users (list profiles for assignment)
-    Route::get('/users', function (\Illuminate\Http\Request $request) {
-        $users = \App\Models\User::select('id', 'full_name', 'email', 'avatar_url')
-            ->orderBy('full_name')
-            ->get();
-        return response()->json([
-            'success' => true,
-            'data' => $users,
-            'message' => 'Users retrieved.',
-        ]);
-    });
+    // Users (full CRUD)
+    Route::apiResource('users', UserController::class);
+    Route::post('/users/{user}/activate', [UserController::class, 'activate']);
+    Route::post('/users/{user}/deactivate', [UserController::class, 'deactivate']);
 
-    // Contacts
+    // Contacts (legacy)
     Route::apiResource('contacts', ContactController::class);
     Route::post('/contacts/import', [ContactController::class, 'import']);
     Route::apiResource('contacts.notes', ContactNoteController::class)->only(['index', 'store', 'destroy']);
-
-    // Contact sub-resources
     Route::get('/contacts/{contact}/tags', [ContactController::class, 'tags']);
     Route::post('/contacts/{contact}/tags', [ContactController::class, 'syncTags']);
     Route::get('/contacts/{contact}/custom-values', [ContactController::class, 'customValues']);
@@ -103,4 +105,66 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/automations/{automation}/logs', [AutomationController::class, 'logs']);
     Route::get('/automations/{automation}/steps', [AutomationController::class, 'steps']);
     Route::put('/automations/{automation}/steps', [AutomationController::class, 'saveSteps']);
+
+    // =====================================================
+    // CRM Module Routes
+    // =====================================================
+
+    // Customers
+    Route::apiResource('customers', CustomerController::class);
+    Route::post('/customers/{customer}/change-status', [CustomerController::class, 'changeStatus']);
+    Route::get('/customers/{customer}/status-history', [CustomerController::class, 'statusHistory']);
+
+    // Leads
+    Route::apiResource('leads', LeadController::class);
+    Route::post('/leads/{lead}/change-status', [LeadController::class, 'changeStatus']);
+    Route::get('/leads/{lead}/history', [LeadController::class, 'history']);
+    Route::get('/leads-report', [LeadController::class, 'report']);
+
+    // Sub-Leads (nested under leads)
+    Route::get('/leads/{lead}/sub-leads', [SubLeadController::class, 'index']);
+    Route::post('/leads/{lead}/sub-leads', [SubLeadController::class, 'store']);
+    Route::put('/leads/{lead}/sub-leads/{subLead}', [SubLeadController::class, 'update']);
+    Route::delete('/leads/{lead}/sub-leads/{subLead}', [SubLeadController::class, 'destroy']);
+
+    // Products
+    Route::apiResource('products', ProductController::class);
+
+    // Companies
+    Route::apiResource('companies', CompanyController::class);
+
+    // Outlets
+    Route::apiResource('outlets', OutletController::class);
+
+    // Roles & Permissions
+    Route::apiResource('roles', RoleController::class);
+    Route::get('/roles/{role}/permissions', [RoleController::class, 'permissions']);
+    Route::put('/roles/{role}/permissions', [RoleController::class, 'syncPermissions']);
+    Route::get('/permissions', [PermissionController::class, 'index']);
+    Route::get('/permissions/grouped', [PermissionController::class, 'grouped']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+
+    // Customer Statuses (master data)
+    Route::get('/customer-statuses', [MasterDataController::class, 'customerStatuses']);
+    Route::post('/customer-statuses', [MasterDataController::class, 'storeCustomerStatus']);
+    Route::put('/customer-statuses/{id}', [MasterDataController::class, 'updateCustomerStatus']);
+    Route::delete('/customer-statuses/{id}', [MasterDataController::class, 'destroyCustomerStatus']);
+    Route::post('/customer-statuses/reorder', [MasterDataController::class, 'reorderCustomerStatuses']);
+
+    // Lead Sources (master data)
+    Route::get('/lead-sources', [MasterDataController::class, 'leadSources']);
+    Route::post('/lead-sources', [MasterDataController::class, 'storeLeadSource']);
+    Route::put('/lead-sources/{id}', [MasterDataController::class, 'updateLeadSource']);
+    Route::delete('/lead-sources/{id}', [MasterDataController::class, 'destroyLeadSource']);
+
+    // Indonesia Address API (cascading dropdown)
+    Route::get('/indonesia/provinces', [MasterDataController::class, 'provinces']);
+    Route::get('/indonesia/cities', [MasterDataController::class, 'cities']);
+    Route::get('/indonesia/districts', [MasterDataController::class, 'districts']);
+    Route::get('/indonesia/villages', [MasterDataController::class, 'villages']);
 });

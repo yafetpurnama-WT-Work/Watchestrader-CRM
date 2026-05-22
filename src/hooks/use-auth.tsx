@@ -10,12 +10,30 @@ import {
 } from "react";
 import { auth, removeAuthToken } from "@/lib/api";
 
+interface Permission {
+  id: string;
+  slug: string;
+  module: string;
+  action: string;
+}
+
+interface RoleRelation {
+  id: string;
+  name: string;
+  slug: string;
+  level: number;
+  permissions: Permission[];
+}
+
 interface Profile {
   id: string;
   full_name: string | null;
   email: string;
   avatar_url: string | null;
   role: string | null;
+  role_relation?: RoleRelation | null;
+  company?: { id: string; name: string } | null;
+  outlet?: { id: string; name: string } | null;
 }
 
 interface AuthContextValue {
@@ -48,12 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: u.email,
           avatar_url: u.avatar_url,
           role: u.role,
+          role_relation: u.role_relation ?? null,
+          company: u.company ?? null,
+          outlet: u.outlet ?? null,
         };
         setUser(profileData);
         setProfile(profileData);
       }
     } catch (err) {
       // Token invalid or expired — clear state
+      removeAuthToken();
       setUser(null);
       setProfile(null);
     }

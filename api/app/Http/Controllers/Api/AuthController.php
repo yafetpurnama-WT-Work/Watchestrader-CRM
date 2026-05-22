@@ -79,9 +79,16 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
+        $user = $request->user()->load([
+            'roleRelation.permissions',
+            'company',
+            'companies',
+            'outlet',
+        ]);
+
         return response()->json([
             'success' => true,
-            'data' => ['user' => $request->user()],
+            'data' => ['user' => $user],
             'message' => 'User profile retrieved.',
         ]);
     }

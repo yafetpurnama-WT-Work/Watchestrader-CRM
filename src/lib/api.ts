@@ -393,11 +393,250 @@ export const automations = {
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 export const dashboard = {
-  stats: () => apiFetch('/dashboard/stats'),
+  stats: (params?: Record<string, string>) =>
+    apiFetch(`/dashboard/stats${qs(params)}`),
 }
 
 // ─── Users / Profiles ────────────────────────────────────────────────────────
 
 export const users = {
-  list: () => apiFetch('/users'),
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/users${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/users', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) =>
+    apiFetch(`/users/${id}`),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/users/${id}`, { method: 'DELETE' }),
+
+  activate: (id: string) =>
+    apiFetch(`/users/${id}/activate`, { method: 'POST' }),
+
+  deactivate: (id: string) =>
+    apiFetch(`/users/${id}/deactivate`, { method: 'POST' }),
 }
+
+// ─── Customers ───────────────────────────────────────────────────────────────
+
+export const customers = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/customers${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/customers', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) =>
+    apiFetch(`/customers/${id}`),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/customers/${id}`, { method: 'DELETE' }),
+
+  changeStatus: (id: string, data: { status_id: string; notes?: string }) =>
+    apiFetch(`/customers/${id}/change-status`, { method: 'POST', body: JSON.stringify(data) }),
+
+  statusHistory: (id: string) =>
+    apiFetch(`/customers/${id}/status-history`),
+}
+
+// ─── Customer Statuses ───────────────────────────────────────────────────────
+
+export const customerStatuses = {
+  list: () => apiFetch('/customer-statuses'),
+
+  create: (data: any) =>
+    apiFetch('/customer-statuses', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/customer-statuses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/customer-statuses/${id}`, { method: 'DELETE' }),
+
+  reorder: (data: { ids: string[] }) =>
+    apiFetch('/customer-statuses/reorder', { method: 'POST', body: JSON.stringify(data) }),
+}
+
+// ─── Lead Sources ────────────────────────────────────────────────────────────
+
+export const leadSources = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/lead-sources${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/lead-sources', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/lead-sources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/lead-sources/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Leads ───────────────────────────────────────────────────────────────────
+
+export const leads = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/leads${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/leads', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) =>
+    apiFetch(`/leads/${id}`),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/leads/${id}`, { method: 'DELETE' }),
+
+  changeStatus: (id: string, data: { status: string; notes?: string }) =>
+    apiFetch(`/leads/${id}/change-status`, { method: 'POST', body: JSON.stringify(data) }),
+
+  history: (id: string) =>
+    apiFetch(`/leads/${id}/history`),
+
+  report: (params?: Record<string, string>) =>
+    apiFetch(`/leads-report${qs(params)}`),
+}
+
+// ─── Sub-Leads ───────────────────────────────────────────────────────────────
+
+export const subLeads = {
+  list: (leadId: string) =>
+    apiFetch(`/leads/${leadId}/sub-leads`),
+
+  create: (leadId: string, data: any) =>
+    apiFetch(`/leads/${leadId}/sub-leads`, { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (leadId: string, id: string, data: any) =>
+    apiFetch(`/leads/${leadId}/sub-leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (leadId: string, id: string) =>
+    apiFetch(`/leads/${leadId}/sub-leads/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Products ────────────────────────────────────────────────────────────────
+
+export const products = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/products${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/products', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) =>
+    apiFetch(`/products/${id}`),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/products/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Companies ───────────────────────────────────────────────────────────────
+
+export const companies = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/companies${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/companies', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) =>
+    apiFetch(`/companies/${id}`),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/companies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/companies/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Outlets ─────────────────────────────────────────────────────────────────
+
+export const outlets = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/outlets${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/outlets', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) =>
+    apiFetch(`/outlets/${id}`),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/outlets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/outlets/${id}`, { method: 'DELETE' }),
+}
+
+// ─── Roles ───────────────────────────────────────────────────────────────────
+
+export const roles = {
+  list: () => apiFetch('/roles'),
+
+  create: (data: any) =>
+    apiFetch('/roles', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) =>
+    apiFetch(`/roles/${id}`),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/roles/${id}`, { method: 'DELETE' }),
+
+  permissions: (id: string) =>
+    apiFetch(`/roles/${id}/permissions`),
+
+  syncPermissions: (id: string, data: { permission_ids: string[] }) =>
+    apiFetch(`/roles/${id}/permissions`, { method: 'PUT', body: JSON.stringify(data) }),
+}
+
+// ─── Permissions ─────────────────────────────────────────────────────────────
+
+export const permissions = {
+  list: () => apiFetch('/permissions'),
+  grouped: () => apiFetch('/permissions/grouped'),
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export const notifications = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/notifications${qs(params)}`),
+
+  markRead: (id: string) =>
+    apiFetch(`/notifications/${id}/read`, { method: 'POST' }),
+
+  markAllRead: () =>
+    apiFetch('/notifications/read-all', { method: 'POST' }),
+
+  unreadCount: () =>
+    apiFetch('/notifications/unread-count'),
+}
+
+// ─── Indonesia Address API (via Backend Proxy) ──────────────────────────────
+// Backend proxies to emsifa/api-wilayah-indonesia (BPS/Kemendagri data).
+// ## No database storage — data is fetched on-demand and cached for 1 hour. ##
+
+export const indonesiaAddress = {
+  provinces: () => apiFetch('/indonesia/provinces'),
+  cities: (provinceCode: string) => apiFetch(`/indonesia/cities?province_code=${provinceCode}`),
+  districts: (cityCode: string) => apiFetch(`/indonesia/districts?city_code=${cityCode}`),
+  villages: (districtCode: string) => apiFetch(`/indonesia/villages?district_code=${districtCode}`),
+}
+

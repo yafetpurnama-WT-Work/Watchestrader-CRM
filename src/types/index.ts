@@ -1,10 +1,20 @@
 export interface Profile {
   id: string;
-  user_id: string;
+  user_id?: string;
   full_name: string;
   email: string;
   avatar_url?: string;
   role: string;
+  phone?: string;
+  role_id?: string;
+  company_id?: string;
+  outlet_id?: string;
+  supervisor_id?: string;
+  status?: 'active' | 'inactive' | 'suspended';
+  role_relation?: Role;
+  company?: Company;
+  outlet?: Outlet;
+  supervisor?: Profile;
   created_at: string;
 }
 
@@ -172,6 +182,12 @@ export interface Deal {
   contact?: Contact;
   stage?: PipelineStage;
   assignee?: Profile;
+  customer_id?: string;
+  lead_id?: string;
+  product_id?: string;
+  customer?: Customer;
+  lead?: Lead;
+  product?: Product;
 }
 
 export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
@@ -384,4 +400,323 @@ export interface AutomationLog {
   error_message?: string | null;
   created_at: string;
   contact?: Contact;
+}
+
+// ==========================================
+// RBAC Types
+// ==========================================
+
+export interface Role {
+  id: string;
+  name: string;
+  slug: 'super_admin' | 'admin' | 'manager' | 'spv' | 'staff';
+  description?: string;
+  level: number;
+  is_active: boolean;
+  permissions?: Permission[];
+  users_count?: number;
+  permissions_count?: number;
+  created_at: string;
+}
+
+export interface Permission {
+  id: string;
+  module: string;
+  action: string;
+  slug: string;
+  description?: string;
+}
+
+// ==========================================
+// Organization Types
+// ==========================================
+
+export interface Company {
+  id: string;
+  name: string;
+  code: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  is_active: boolean;
+  outlets_count?: number;
+  users_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Outlet {
+  id: string;
+  company_id: string;
+  name: string;
+  code: string;
+  city: string;
+  address?: string;
+  phone?: string;
+  is_active: boolean;
+  company?: Company;
+  users_count?: number;
+  customers_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ==========================================
+// Indonesia Address Types
+// ==========================================
+
+export interface IndonesiaProvince {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface IndonesiaCity {
+  id: number;
+  province_code: string;
+  code: string;
+  name: string;
+  type: 'kabupaten' | 'kota';
+}
+
+export interface IndonesiaDistrict {
+  id: number;
+  city_code: string;
+  code: string;
+  name: string;
+}
+
+export interface IndonesiaVillage {
+  id: number;
+  district_code: string;
+  code: string;
+  name: string;
+  postal_code?: string;
+}
+
+// ==========================================
+// Customer Types
+// ==========================================
+
+export interface CustomerStatus {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  position: number;
+  is_default: boolean;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  province_code?: string;
+  city_code?: string;
+  district_code?: string;
+  village_code?: string;
+  rt?: string;
+  rw?: string;
+  postal_code?: string;
+  company_id?: string;
+  outlet_id?: string;
+  assigned_sales_id?: string;
+  status_id?: string;
+  source?: string;
+  created_by?: string;
+  updated_by?: string;
+  company?: Company;
+  outlet?: Outlet;
+  assigned_sales?: Profile;
+  status?: CustomerStatus;
+  province?: IndonesiaProvince;
+  city?: IndonesiaCity;
+  district?: IndonesiaDistrict;
+  village?: IndonesiaVillage;
+  leads_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerStatusHistory {
+  id: string;
+  customer_id: string;
+  from_status_id?: string;
+  to_status_id?: string;
+  changed_by?: string;
+  notes?: string;
+  from_status?: CustomerStatus;
+  to_status?: CustomerStatus;
+  changed_by_user?: Profile;
+  created_at: string;
+}
+
+// ==========================================
+// Lead Types
+// ==========================================
+
+export type LeadStatus = 'junk' | 'cold' | 'mql' | 'hot' | 'deal_won' | 'deal_lost';
+
+export interface LeadSource {
+  id: string;
+  name: string;
+  code: string;
+  icon?: string;
+  color: string;
+  is_active: boolean;
+  leads_count?: number;
+}
+
+export interface Lead {
+  id: string;
+  customer_id: string;
+  assigned_to?: string;
+  source_id?: string;
+  status: LeadStatus;
+  title: string;
+  notes?: string;
+  value: number;
+  company_id?: string;
+  outlet_id?: string;
+  created_by?: string;
+  updated_by?: string;
+  customer?: Customer;
+  assigned_to_user?: Profile;
+  source?: LeadSource;
+  company?: Company;
+  outlet?: Outlet;
+  sub_leads?: SubLead[];
+  sub_leads_count?: number;
+  history?: LeadHistory[];
+  creator?: Profile;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubLead {
+  id: string;
+  lead_id: string;
+  product_id?: string;
+  title: string;
+  notes?: string;
+  value: number;
+  status: LeadStatus;
+  product?: Product;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface LeadHistory {
+  id: string;
+  lead_id: string;
+  action: string;
+  from_status?: string;
+  to_status?: string;
+  notes?: string;
+  performed_by?: string;
+  performer?: Profile;
+  created_at: string;
+}
+
+// ==========================================
+// Product Types
+// ==========================================
+
+export type WatchCondition = 'unworn' | 'pre_owned';
+export type WatchCategory = 'man' | 'ladies' | 'others';
+export type ProductAvailability = 'ready_stock' | 'pre_order' | 'sold';
+export type ProductSourceType = 'manual' | 'erp';
+
+export interface Product {
+  id: string;
+  brand: string;
+  model: string;
+  reference_number?: string;
+  description?: string;
+  year?: number;
+  condition: WatchCondition;
+  category: WatchCategory;
+  movement_type?: string;
+  case_material?: string;
+  case_size?: string;
+  dial_color?: string;
+  strap_material?: string;
+  bezel_type?: string;
+  documentation?: string;
+  availability: ProductAvailability;
+  price: number;
+  discount_price?: number;
+  discount_percent?: number;
+  currency: string;
+  image_url?: string;
+  outlet_id?: string;
+  is_active: boolean;
+  source_type: ProductSourceType;
+  erp_item_id?: string;
+  outlet?: Outlet;
+  created_at: string;
+  updated_at: string;
+}
+
+// ==========================================
+// Notification Types
+// ==========================================
+
+export type NotificationType = 'lead_assigned' | 'deal_status_changed' | 'new_customer' | 'lead_status_changed' | 'system';
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message?: string;
+  link?: string;
+  data?: Record<string, unknown>;
+  company_id?: string;
+  outlet_id?: string;
+  read_at?: string;
+  created_at: string;
+}
+
+// ==========================================
+// Dashboard Types
+// ==========================================
+
+export interface DashboardStats {
+  new_leads: number;
+  in_work: number;
+  deals: number;
+  total_leads: number;
+}
+
+export interface LeadSourceStat {
+  source: string;
+  code: string;
+  count: number;
+  color: string;
+  icon?: string;
+}
+
+export interface TopSalesman {
+  id: string;
+  name: string;
+  avatar_url?: string;
+  total_leads: number;
+  total_deals: number;
+}
+
+// ==========================================
+// Paginated Response
+// ==========================================
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  from: number;
+  to: number;
 }

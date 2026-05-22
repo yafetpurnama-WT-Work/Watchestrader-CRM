@@ -612,7 +612,7 @@ export function MessageThread({
                   return (
                     <DropdownMenuItem
                       key={p.id}
-                      onClick={() => handleAssignChange(p.user_id)}
+                      onClick={() => handleAssignChange(p.user_id ?? null)}
                       className={cn(
                         "text-sm",
                         isSelected ? "text-violet-400" : "text-slate-300"
