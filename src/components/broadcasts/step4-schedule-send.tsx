@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { contacts as contactsApi } from '@/lib/api';
 import { MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ import { ArrowLeft, Send, Loader2, Users, Save } from 'lucide-react';
 interface AudienceConfig {
   type: string;
   tagIds?: string[];
+  customField?: any;
+  excludeTagIds?: string[];
   csvContacts?: { phone: string; name?: string }[];
 }
 
@@ -53,26 +55,46 @@ export function Step4ScheduleSend({
     async function calculateReach() {
       setLoadingReach(true);
       try {
-        const supabase = createClient();
+        const res = await contactsApi.list();
+        let contacts = res.data?.data || res.data || [];
+        if (!Array.isArray(contacts)) contacts = [];
 
-        if (audience.type === 'all') {
-          const { count } = await supabase
-            .from('contacts')
-            .select('*', { count: 'exact', head: true });
-          setEstimatedReach(count ?? 0);
-        } else if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
-          const { data: contactTags } = await supabase
-            .from('contact_tags')
-            .select('contact_id')
-            .in('tag_id', audience.tagIds);
+        let filtered = contacts;
 
-          const uniqueIds = new Set((contactTags ?? []).map((ct) => ct.contact_id));
-          setEstimatedReach(uniqueIds.size);
+        if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
+          filtered = filtered.filter((c: any) =>
+            c.tags?.some((t: any) => audience.tagIds!.includes(t.id))
+          );
+        } else if (
+          audience.type === 'custom_field' &&
+          audience.customField?.fieldId &&
+          audience.customField.value
+        ) {
+          const { fieldId, operator, value } = audience.customField;
+          filtered = filtered.filter((c: any) => {
+            const cv = c.customValues?.find((v: any) => v.custom_field_id === fieldId);
+            if (!cv) return false;
+            if (operator === 'is') return cv.value === value;
+            if (operator === 'is_not') return cv.value !== value;
+            return cv.value.toLowerCase().includes(value.toLowerCase());
+          });
         } else if (audience.type === 'csv' && audience.csvContacts) {
           setEstimatedReach(audience.csvContacts.length);
-        } else {
+          return;
+        } else if (audience.type !== 'all') {
           setEstimatedReach(0);
+          return;
         }
+
+        if (audience.excludeTagIds && audience.excludeTagIds.length > 0) {
+          filtered = filtered.filter(
+            (c: any) => !c.tags?.some((t: any) => audience.excludeTagIds!.includes(t.id))
+          );
+        }
+
+        setEstimatedReach(filtered.length);
+      } catch (err) {
+        setEstimatedReach(0);
       } finally {
         setLoadingReach(false);
       }

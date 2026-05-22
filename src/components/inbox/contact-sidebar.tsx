@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { contacts as contactsApi, contactNotes as contactNotesApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Contact, Deal, ContactNote, Tag } from "@/types";
 import {
@@ -34,36 +34,25 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const fetchContactData = useCallback(async () => {
     if (!contact) return;
 
-    const supabase = createClient();
+    try {
+      const [dealsRes, notesRes, tagsRes] = await Promise.all([
+        contactsApi.getDeals(contact.id),
+        contactNotesApi.list(contact.id),
+        contactsApi.getTags(contact.id),
+      ]);
 
-    // Fetch deals, notes, and tags in parallel
-    const [dealsRes, notesRes, tagsRes] = await Promise.all([
-      supabase
-        .from("deals")
-        .select("*, stage:pipeline_stages(*)")
-        .eq("contact_id", contact.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("contact_notes")
-        .select("*")
-        .eq("contact_id", contact.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("contact_tags")
-        .select("id, tag_id, tags(*)")
-        .eq("contact_id", contact.id),
-    ]);
+      const dealsData = dealsRes.data?.data || dealsRes.data || [];
+      if (Array.isArray(dealsData)) setDeals(dealsData as Deal[]);
 
-    if (dealsRes.data) setDeals(dealsRes.data);
-    if (notesRes.data) setNotes(notesRes.data);
-    if (tagsRes.data) {
-      const mapped = tagsRes.data
-        .filter((ct: Record<string, unknown>) => ct.tags)
-        .map((ct: Record<string, unknown>) => ({
-          ...(ct.tags as Tag),
-          contact_tag_id: ct.id as string,
-        }));
-      setTags(mapped);
+      const notesData = notesRes.data?.data || notesRes.data || [];
+      if (Array.isArray(notesData)) setNotes(notesData as ContactNote[]);
+
+      const tagsData = tagsRes.data?.data || tagsRes.data || [];
+      if (Array.isArray(tagsData)) {
+        setTags(tagsData.map((t: any) => ({ ...t, contact_tag_id: t.id })));
+      }
+    } catch (err) {
+      console.error(err);
     }
   }, [contact]);
 
@@ -88,25 +77,17 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
     if (!contact || !newNote.trim()) return;
     setAddingNote(true);
 
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const user = session?.user;
-
-    const { data, error } = await supabase
-      .from("contact_notes")
-      .insert({
-        contact_id: contact.id,
-        user_id: user?.id,
+    try {
+      const res = await contactNotesApi.create(contact.id, {
         note_text: newNote.trim(),
-      })
-      .select()
-      .single();
-
-    if (!error && data) {
-      setNotes((prev) => [data, ...prev]);
-      setNewNote("");
+      });
+      const data = res.data?.data || res.data;
+      if (data) {
+        setNotes((prev) => [data, ...prev]);
+        setNewNote("");
+      }
+    } catch (err) {
+      console.error(err);
     }
     setAddingNote(false);
   }, [contact, newNote]);

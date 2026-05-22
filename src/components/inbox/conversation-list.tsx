@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { conversations as conversationsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus } from "@/types";
 import { Search, ChevronDown } from "lucide-react";
@@ -64,31 +64,20 @@ export function ConversationList({
   });
 
   useEffect(() => {
-    const supabase = createClient();
     let cancelled = false;
 
     (async () => {
-      const { data, error } = await supabase
-        .from("conversations")
-        .select("*, contact:contacts(*)")
-        .order("last_message_at", { ascending: false });
+      try {
+        const res = await conversationsApi.list();
+        if (cancelled) return;
 
-      if (cancelled) return;
-
-      if (error) {
-        // Supabase errors have non-enumerable properties — log fields explicitly
-        console.error("Failed to fetch conversations:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
-        setLoading(false);
-        return;
+        const data = res.data?.data || res.data || [];
+        onConversationsLoadedRef.current(data);
+      } catch (err) {
+        console.error("Failed to fetch conversations:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      onConversationsLoadedRef.current(data ?? []);
-      setLoading(false);
     })();
 
     return () => {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, KeyRound } from 'lucide-react';
 
-import { createClient } from '@/lib/supabase/client';
+import { auth } from '@/lib/api';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,6 @@ const MIN_PASSWORD = 8;
 
 export function PasswordForm() {
   const { profile } = useAuth();
-  const supabase = createClient();
 
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -47,26 +46,11 @@ export function PasswordForm() {
     setSaving(true);
 
     try {
-      // Supabase doesn't expose a "verify password without issuing a
-      // session" API, so we re-authenticate with the provided current
-      // password. If it matches, the session refreshes silently; if it
-      // doesn't, we abort before calling updateUser.
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: profile.email,
-        password: current,
-      });
-      if (signInError) {
-        toast.error('Current password is incorrect');
-        return;
-      }
-
-      const { error: updateError } = await supabase.auth.updateUser({
+      await auth.changePassword({
+        current_password: current,
         password: next,
+        password_confirmation: confirm,
       });
-      if (updateError) {
-        toast.error(`Password update failed: ${updateError.message}`);
-        return;
-      }
 
       setCurrent('');
       setNext('');
@@ -81,13 +65,13 @@ export function PasswordForm() {
   };
 
   return (
-    <Card className="bg-slate-900/40 border-slate-800">
+    <Card className="bg-theme-bg-card border-theme-border shadow-sm">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-white">
+        <CardTitle className="flex items-center gap-2 text-theme-text">
           <KeyRound className="size-4 text-violet-400" />
           Password
         </CardTitle>
-        <CardDescription className="text-slate-400">
+        <CardDescription className="text-theme-text-muted">
           Use at least {MIN_PASSWORD} characters. You will stay signed in on
           this device after changing it.
         </CardDescription>
@@ -96,7 +80,7 @@ export function PasswordForm() {
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="current-password" className="text-slate-200">
+            <Label htmlFor="current-password" className="text-theme-text-secondary">
               Current password
             </Label>
             <Input
@@ -112,7 +96,7 @@ export function PasswordForm() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="new-password" className="text-slate-200">
+              <Label htmlFor="new-password" className="text-theme-text-secondary">
                 New password
               </Label>
               <Input
@@ -127,7 +111,7 @@ export function PasswordForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password" className="text-slate-200">
+              <Label htmlFor="confirm-password" className="text-theme-text-secondary">
                 Confirm new password
               </Label>
               <Input

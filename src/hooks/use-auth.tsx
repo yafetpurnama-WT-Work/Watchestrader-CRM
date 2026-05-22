@@ -8,8 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import { auth, removeAuthToken } from "@/lib/api";
 
 interface Profile {
   id: string;
@@ -20,87 +19,56 @@ interface Profile {
 }
 
 interface AuthContextValue {
-  user: User | null;
+  user: Profile | null;
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  /** Re-fetch the current user's profile row — call after a save from
-   *  the settings form so header/sidebar reflect the change without a
-   *  full page reload. */
   refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * AuthProvider — wrap this around the dashboard layout.
- * Makes ONE getSession() call for the whole tree instead of one per
- * component, avoiding internal lock contention in the Supabase client.
+ * AuthProvider — wraps the dashboard layout.
+ * Fetches user profile from Laravel API via Sanctum token.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Profile | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Shared across init, auth-state-change listener, and the exposed
-  // refreshProfile() callback. Reads the current session's user id and
-  // pulls the matching profile row.
-  const fetchProfile = useCallback(async (userId: string) => {
-    const supabase = createClient();
+  const fetchProfile = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, avatar_url, role")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[AuthProvider] fetchProfile error:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
-        return;
+      const res = await auth.me();
+      if (res.success && res.data?.user) {
+        const u = res.data.user;
+        const profileData: Profile = {
+          id: u.id,
+          full_name: u.full_name,
+          email: u.email,
+          avatar_url: u.avatar_url,
+          role: u.role,
+        };
+        setUser(profileData);
+        setProfile(profileData);
       }
-
-      if (data) setProfile(data);
     } catch (err) {
-      console.error("[AuthProvider] fetchProfile threw:", err);
+      // Token invalid or expired — clear state
+      setUser(null);
+      setProfile(null);
     }
   }, []);
 
   useEffect(() => {
-    const supabase = createClient();
     let mounted = true;
 
     const safetyTimer = setTimeout(() => {
-      if (mounted) {
-        console.warn("[AuthProvider] getSession() timed out after 3s");
-        setLoading(false);
-      }
+      if (mounted) setLoading(false);
     }, 3000);
 
     const init = async () => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) console.error("[AuthProvider] getSession error:", error.message);
-
-        if (!mounted) return;
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          // Don't block loading on profile fetch — let the UI render
-          // with the user info we already have, profile enriches async.
-          fetchProfile(currentUser.id);
-        }
-      } catch (err) {
-        console.error("[AuthProvider] init threw:", err);
+        await fetchProfile();
       } finally {
         if (mounted) setLoading(false);
         clearTimeout(safetyTimer);
@@ -109,41 +77,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     init();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-
-      if (currentUser) {
-        fetchProfile(currentUser.id);
-      } else {
-        setProfile(null);
-      }
-
-      setLoading(false);
-    });
-
     return () => {
       mounted = false;
       clearTimeout(safetyTimer);
-      subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const signOut = useCallback(async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      await auth.logout();
+    } catch {
+      // ignore logout API error
+    }
+    removeAuthToken();
     setUser(null);
     setProfile(null);
     window.location.href = "/login";
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (!user?.id) return;
-    await fetchProfile(user.id);
-  }, [user?.id, fetchProfile]);
+    await fetchProfile();
+  }, [fetchProfile]);
 
   return (
     <AuthContext.Provider
@@ -161,13 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    // Fallback for components rendered outside the provider (shouldn't
-    // happen in normal flow, but don't crash the page).
     return {
       user: null,
       profile: null,
       loading: false,
       signOut: async () => {
+        removeAuthToken();
         window.location.href = "/login";
       },
       refreshProfile: async () => {},

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { broadcasts as broadcastsApi } from '@/lib/api';
 import { Broadcast } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -65,14 +65,9 @@ export default function BroadcastsPage() {
 
   async function fetchBroadcasts() {
     try {
-      const supabase = createClient();
-      const { data, error: fetchError } = await supabase
-        .from('broadcasts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-      setBroadcasts(data ?? []);
+      const res = await broadcastsApi.list();
+      const data = res.data?.data || res.data || [];
+      setBroadcasts(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load broadcasts');
     } finally {
@@ -174,7 +169,7 @@ export default function BroadcastsPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Broadcasts</h1>
           <p className="mt-1 text-sm text-slate-400">

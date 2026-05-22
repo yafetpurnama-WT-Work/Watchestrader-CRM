@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { contacts as contactsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -78,7 +78,6 @@ function parseCSV(text: string): ParsedRow[] {
 }
 
 export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps) {
-  const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -122,46 +121,18 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
     setImporting(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user) throw new Error('Not authenticated');
+      const contactsToImport = parsedRows.map((row) => ({
+        phone: row.phone,
+        name: row.name || undefined,
+        email: row.email || undefined,
+        company: row.company || undefined,
+      }));
 
-      let imported = 0;
-      let failed = 0;
-
-      // Batch insert in chunks of 50
-      const chunkSize = 50;
-      for (let i = 0; i < parsedRows.length; i += chunkSize) {
-        const chunk = parsedRows.slice(i, i + chunkSize);
-        const rows = chunk.map((row) => ({
-          user_id: user.id,
-          phone: row.phone,
-          name: row.name || null,
-          email: row.email || null,
-          company: row.company || null,
-        }));
-
-        const { data, error } = await supabase
-          .from('contacts')
-          .insert(rows)
-          .select('id');
-
-        if (error) {
-          // Try individual inserts for this chunk
-          for (const row of rows) {
-            const { error: singleErr } = await supabase.from('contacts').insert(row);
-            if (singleErr) {
-              failed++;
-            } else {
-              imported++;
-            }
-          }
-        } else {
-          imported += data?.length ?? chunk.length;
-        }
-      }
+      const res = await contactsApi.import({ contacts: contactsToImport });
+      const responseData = res.data?.data || res.data || {};
+      
+      const imported = responseData.imported ?? contactsToImport.length;
+      const failed = responseData.failed ?? 0;
 
       setResult({ imported, failed });
       if (imported > 0) {

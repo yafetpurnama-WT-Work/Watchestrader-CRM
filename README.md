@@ -1,102 +1,78 @@
-# wacrm — CRM Template for WhatsApp
+# Watchestrader CRM (wacrm)
 
-> Self-hostable CRM template for WhatsApp® — shared inbox, contacts,
-> sales pipelines, broadcasts, and no-code automations. Fork it, brand
-> it, host it.
+> Sistem CRM (Customer Relationship Management) internal yang dirancang khusus untuk **Watches Traders**. Sistem ini mengintegrasikan platform perpesanan WhatsApp® dengan fitur shared inbox, pengelolaan kontak, pipelines penjualan (Kanban), siaran pesan (broadcasts), serta otomatisasi alur kerja tanpa kode (*no-code automations*).
 
-[![Deploy on Hostinger](https://img.shields.io/badge/Deploy_on-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](https://www.hostinger.com/web-apps-hosting)
+Aplikasi ini telah dimigrasi dari arsitektur *Supabase Serverless* menjadi arsitektur modern **Decoupled Full-stack** dengan memisahkan Frontend dan Backend secara terstruktur.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](./LICENSE)
-[![CI](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml/badge.svg)](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml)
-[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org)
-[![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ecf8e?logo=supabase)](https://supabase.com)
-[![Stars](https://img.shields.io/github/stars/ArnasDon/wacrm?style=social)](https://github.com/ArnasDon/wacrm/stargazers)
+---
 
-The marketing site and self-host docs live in a separate repo:
-[ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)
-([wacrm.tech](https://wacrm.tech)). This repo is the product —
-clone or fork it to run your own CRM.
+## 🛠️ Stack Teknologi & Arsitektur Baru
 
-## What you get out of the box
+Sistem ini terbagi menjadi dua bagian utama untuk memaksimalkan performa, keamanan, dan fleksibilitas pengembangan:
 
-- **Shared inbox** on the official WhatsApp Business API — multiple
-  agents working one number, per-conversation assignment, status, and
-  notes.
-- **Contacts + tags + custom fields**, CSV import, deduplication.
-- **Sales pipelines** (Kanban) with deals linked to conversations.
-- **Broadcasts** with Meta-approved templates, delivery + read
-  tracking, per-recipient variable substitution.
-- **No-code automations** — triggers on inbound messages, new
-  contacts, keywords, or schedule; conditional branches, waits,
-  tags, webhooks. Visual builder.
-- **Real-time dashboard** — response times, daily volume, pipeline
-  value, cross-module activity feed.
-- **Account management** — email, password, avatar, global sign-out.
+### 1. Frontend (Next.js)
+* **Framework:** Next.js (App Router) & React
+* **Bahasa:** TypeScript
+* **Styling:** Tailwind CSS dengan kustomisasi tema dinamis (*Light* & *Dark* mode) yang premium.
+* **Fungsi:** Menangani interaksi pengguna, rendering UI dashboard, manajemen state visual, dan visualisasi data pipa penjualan (Kanban).
 
-## Why fork this?
+### 2. Backend (Laravel API)
+* **Framework:** Laravel (PHP)
+* **Autentikasi:** Laravel Sanctum (Token-based API Authentication)
+* **Database & ORM:** Eloquent ORM dengan dukungan UUID di semua model.
+* **Migrasi Database:** Dikelola penuh oleh Laravel Migrations (MySQL/PostgreSQL).
+* **Fungsi:** Mengelola data inti CRM, menangani webhook Meta WhatsApp API, eksekusi otomatisasi backend, serta enkripsi token sensitif.
 
-This is a **template**, not a product. Forking means you get:
+---
 
-- **Full ownership** — your code, your Supabase project, your domain,
-  your data. No SaaS lock-in, no seat pricing, no trust dance.
-- **Full customisation** — add the fields your team needs, remove the
-  modules you don't, redesign anything. The stack is boring on
-  purpose (Next.js + Supabase + Tailwind) so the learning curve is
-  short.
-- **Zero ops to start** — Hostinger Managed Node.js deploys a fork in
-  a few clicks. No Docker, no Kubernetes, no infra team needed.
-- **Real security primitives** — token encryption (AES-256-GCM), RLS
-  on every table, HMAC-verified webhooks, CSP, rate limiting, CI
-  typecheck/build on every PR.
+## 📁 Struktur Folder Project
 
-Not a framework. Not an SDK. A concrete, working CRM you can stand up
-in an afternoon and make yours.
+* **`/src`** — Berisi kode sumber frontend Next.js (Halaman, Komponen Visual, React Hooks, Global State).
+* **`/api`** — Berisi backend utama berbasis Laravel (Controllers, Models, Database Migrations, API Routes).
+* **`/public`** — Aset publik seperti logo Watches Traders dan gambar banner dashboard.
+* **`/supabase`** — **[Legacy Folder]** Berisi skema database dan migrasi lama dari era Supabase.
 
-## Quick start
+---
 
+## ⚠️ Informasi Penting Terkait Folder `/supabase`
+
+Sebagai bagian dari proses transisi arsitektur dari Supabase ke Laravel backend:
+* **Penghapusan API Routes Lama:** Semua file API internal Next.js di folder `src/app/api/...` **telah dihapus** secara permanen. Hal ini dilakukan guna mencegah duplikasi logika backend dan memastikan seluruh request data diarahkan langsung ke Laravel backend.
+* **Fungsi Folder `/supabase/migrations` Saat Ini:** Folder `/supabase/migrations` berisi file-file SQL lama yang berfungsi **hanya sebagai referensi sejarah / cetak biru (*blueprint*)** dari struktur tabel awal. Folder ini berguna jika Anda ingin mencocokkan tipe data kolom atau relasi tabel lama dengan migrasi Laravel yang baru.
+
+### 📅 Kapan Folder `/supabase` Bisa Dihapus?
+> [!IMPORTANT]  
+> Anda dapat menghapus seluruh folder `/supabase` secara aman dan permanen dari repository Anda ketika:
+> 1. Sistem backend baru berbasis **Laravel API** sudah dideploy secara sukses dan stabil di server production.
+> 2. Database production (MySQL/PostgreSQL) sudah berjalan lancar menggunakan Laravel Migrations.
+> 3. Anda telah memverifikasi secara menyeluruh bahwa tidak ada lagi dependensi atau kode yang mengarah ke endpoint Supabase lama.
+
+---
+
+## 🚀 Cara Menjalankan Project Secara Lokal
+
+### 1. Menjalankan Backend (Laravel)
+Pastikan Anda memiliki PHP (>= 8.2) dan MySQL/PostgreSQL yang berjalan (misalnya lewat Laragon atau XAMPP).
 ```bash
-# Fork on GitHub first: https://github.com/ArnasDon/wacrm → Fork
-git clone https://github.com/<your-username>/wacrm.git
-cd wacrm
+cd api
+composer install
+cp .env.example .env # Sesuaikan kredensial database Anda
+php artisan key:generate
+php artisan migrate # Membuat tabel-tabel database CRM
+php artisan serve
+```
+Backend API Anda akan berjalan di `http://127.0.0.1:8000`.
+
+### 2. Menjalankan Frontend (Next.js)
+```bash
+# Kembali ke root folder project
 npm install
-cp .env.local.example .env.local   # fill in Supabase + Meta creds
+cp .env.local.example .env.local # Sesuaikan NEXT_PUBLIC_API_URL ke backend Laravel Anda
 npm run dev
 ```
+Buka browser Anda dan akses `http://localhost:3000`.
 
-Open <http://localhost:3000>. You'll be redirected to `/login` (or
-`/dashboard` if already signed in).
+---
 
-## Documentation
-
-Full self-host documentation — Supabase migrations, WhatsApp Business
-API config, and production deploy — lives at
-**[wacrm.tech/docs](https://wacrm.tech/docs)**
-(source: [ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)).
-
-Key pages:
-- [Getting started](https://wacrm.tech/docs/getting-started)
-- [Supabase setup](https://wacrm.tech/docs/supabase-setup)
-- [WhatsApp setup](https://wacrm.tech/docs/whatsapp-setup)
-- [Environment variables](https://wacrm.tech/docs/environment-variables)
-- [Deploy on Hostinger](https://wacrm.tech/docs/deployment-hostinger)
-- [Architecture](https://wacrm.tech/docs/architecture)
-- [Troubleshooting](https://wacrm.tech/docs/troubleshooting)
-
-## Stack
-
-- **App** — Next.js 16 (App Router), React 19, TypeScript, Tailwind v4.
-- **Data** — Supabase (Postgres + Auth + Storage + RLS).
-- **WhatsApp** — Meta Cloud API (official WhatsApp Business API).
-
-## Contributing
-
-This is a template, not a collaborative product — the expected flow is
-fork → customise → deploy, **not** upstream contribution. Bug reports
-and security issues are welcome; feature PRs often belong in your fork
-rather than here. Details in
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) and
-[`.github/SECURITY.md`](./.github/SECURITY.md).
-
-## License
-
-[MIT](./LICENSE). Fork it, brand it, host it.
+## 📄 Lisensi
+Hak Cipta Internal © **Watches Traders**. Penggunaan, penyalinan, atau modifikasi perangkat lunak ini secara tidak sah di luar izin Watches Traders sangat dilarang.

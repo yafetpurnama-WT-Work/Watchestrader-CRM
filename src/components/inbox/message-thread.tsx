@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { messages as messagesApi, conversations as conversationsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import type {
@@ -125,23 +125,8 @@ export function MessageThread({
   // see — today that's just the current user, but the dropdown keeps the
   // shape ready for shared-team workspaces without a refactor.
   useEffect(() => {
-    let cancelled = false;
-    const supabase = createClient();
-    supabase
-      .from("profiles")
-      .select("*")
-      .order("full_name")
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.error("Failed to fetch profiles:", error);
-          return;
-        }
-        setProfiles((data as Profile[]) ?? []);
-      });
-    return () => {
-      cancelled = true;
-    };
+    // TODO: Fetch users for assignment when API endpoint is available
+    setProfiles([]);
   }, []);
 
   // 24-hour session timer
@@ -193,31 +178,29 @@ export function MessageThread({
   useEffect(() => {
     if (!conversationId) return;
 
-    const supabase = createClient();
     let cancelled = false;
 
-    (async () => {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
-
-      if (cancelled) return;
-
-      if (error) {
-        console.error("Failed to fetch messages:", error);
-      } else {
-        onMessagesLoadedRef.current(data ?? []);
+    const fetchMsgs = async () => {
+      try {
+        const res = await messagesApi.list(conversationId);
+        if (cancelled) return;
+        const data = res.data?.data || res.data || [];
+        onMessagesLoadedRef.current(data);
+      } catch (err) {
+        console.error("Failed to fetch messages:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    };
 
-      if (!cancelled) setLoading(false);
-    })();
+    setLoading(true);
+    fetchMsgs();
+
+    const interval = setInterval(fetchMsgs, 3000);
 
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [conversationId]);
 
@@ -225,92 +208,9 @@ export function MessageThread({
   // the page level) keeps the channel scoped to the visible conversation,
   // matching the message fetch effect above and avoiding cross-conversation
   // chatter on a busy inbox.
+  // TODO: Migrate reactions to API + polling
   useEffect(() => {
-    if (!conversationId) {
-      setReactions([]);
-      return;
-    }
-    const supabase = createClient();
-    let cancelled = false;
-
-    (async () => {
-      const { data, error } = await supabase
-        .from("message_reactions")
-        .select("*")
-        .eq("conversation_id", conversationId);
-      if (cancelled) return;
-      if (error) {
-        console.error("Failed to fetch reactions:", error);
-        return;
-      }
-      setReactions((data as MessageReaction[]) ?? []);
-    })();
-
-    const channel = supabase
-      .channel(`reactions:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "message_reactions",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const row = payload.new as MessageReaction;
-          setReactions((prev) => {
-            if (prev.some((r) => r.id === row.id)) return prev;
-            // Swap any matching optimistic temp row for the real one so
-            // the pill doesn't double up after a successful POST.
-            const tempIdx = prev.findIndex(
-              (r) =>
-                r.id.startsWith("temp-") &&
-                r.message_id === row.message_id &&
-                r.actor_type === row.actor_type &&
-                r.actor_id === row.actor_id,
-            );
-            if (tempIdx >= 0) {
-              const copy = prev.slice();
-              copy[tempIdx] = row;
-              return copy;
-            }
-            return [...prev, row];
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "message_reactions",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const row = payload.new as MessageReaction;
-          setReactions((prev) => prev.map((r) => (r.id === row.id ? row : r)));
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "message_reactions",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const old = payload.old as Partial<MessageReaction>;
-          if (!old?.id) return;
-          setReactions((prev) => prev.filter((r) => r.id !== old.id));
-        },
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
+    setReactions([]);
   }, [conversationId]);
 
   // Clear any in-progress reply draft when the active conversation changes —
@@ -330,14 +230,9 @@ export function MessageThread({
   // is 0 the condition is false, so no further UPDATE is issued.
   useEffect(() => {
     if (!conversationId || !hasUnread) return;
-    const supabase = createClient();
-    supabase
-      .from("conversations")
-      .update({ unread_count: 0 })
-      .eq("id", conversationId)
-      .then(({ error }) => {
-        if (error) console.error("Failed to reset unread_count:", error);
-      });
+    conversationsApi.update(conversationId, { unread_count: 0 }).catch(err => {
+      console.error("Failed to reset unread_count:", err);
+    });
   }, [conversationId, hasUnread]);
 
   // Auto-scroll to bottom on new messages
@@ -409,13 +304,13 @@ export function MessageThread({
     async (status: ConversationStatus) => {
       if (!conversation) return;
 
-      const supabase = createClient();
-      await supabase
-        .from("conversations")
-        .update({ status })
-        .eq("id", conversation.id);
-
-      onStatusChange(conversation.id, status);
+      try {
+        await conversationsApi.update(conversation.id, { status });
+        onStatusChange(conversation.id, status);
+      } catch (err) {
+        console.error("Failed to update status:", err);
+        toast.error("Failed to update status");
+      }
     },
     [conversation, onStatusChange]
   );
@@ -588,19 +483,13 @@ export function MessageThread({
     async (agentId: string | null) => {
       if (!conversation) return;
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("conversations")
-        .update({ assigned_agent_id: agentId })
-        .eq("id", conversation.id);
-
-      if (error) {
-        console.error("Failed to update assignment:", error);
+      try {
+        await conversationsApi.update(conversation.id, { assigned_agent_id: agentId });
+        onAssignChange(conversation.id, agentId);
+      } catch (err) {
+        console.error("Failed to update assignment:", err);
         toast.error("Failed to update assignment");
-        return;
       }
-
-      onAssignChange(conversation.id, agentId);
     },
     [conversation, onAssignChange],
   );

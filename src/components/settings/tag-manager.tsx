@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, X, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { tags as tagsApi } from '@/lib/api';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,6 @@ const PRESET_COLORS = [
 ];
 
 export function TagManager() {
-  const supabase = createClient();
   const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -54,18 +53,12 @@ export function TagManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
-  async function fetchTags(userId: string) {
+  async function fetchTags(_userId: string) {
     try {
       setLoading(true);
-
-      const { data, error } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setTags(data || []);
+      const res = await tagsApi.list();
+      const data = res.data?.data || res.data || [];
+      setTags(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch tags:', err);
       toast.error('Failed to load tags');
@@ -82,21 +75,7 @@ export function TagManager() {
 
     try {
       setSaving(true);
-      if (!user) {
-        toast.error('Not authenticated');
-        return;
-      }
-
-      const { error } = await supabase
-        .from('tags')
-        .insert({
-          user_id: user.id,
-          name: newTagName.trim(),
-          color: selectedColor,
-        });
-
-      if (error) throw error;
-
+      await tagsApi.create({ name: newTagName.trim(), color: selectedColor });
       toast.success('Tag created successfully');
       setDialogOpen(false);
       setNewTagName('');
@@ -120,13 +99,7 @@ export function TagManager() {
 
     try {
       setDeleting(true);
-      const { error } = await supabase
-        .from('tags')
-        .delete()
-        .eq('id', tagToDelete.id);
-
-      if (error) throw error;
-
+      await tagsApi.delete(tagToDelete.id);
       toast.success('Tag deleted');
       setTags((prev) => prev.filter((t) => t.id !== tagToDelete.id));
       setDeleteDialogOpen(false);
@@ -151,8 +124,8 @@ export function TagManager() {
     <div className="space-y-4 mt-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Tags</h2>
-          <p className="text-sm text-slate-400">Organize your contacts with color-coded tags.</p>
+          <h2 className="text-lg font-semibold text-theme-text">Tags</h2>
+          <p className="text-sm text-theme-text-muted">Organize your contacts with color-coded tags.</p>
         </div>
         <Button
           onClick={() => {
@@ -168,14 +141,14 @@ export function TagManager() {
       </div>
 
       {tags.length === 0 ? (
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-theme-bg-card border-theme-border shadow-sm ring-0 ring-transparent">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-slate-400 text-sm">No tags yet.</p>
-            <p className="text-slate-500 text-xs mt-1">Create tags to categorize your contacts.</p>
+            <p className="text-theme-text-muted text-sm">No tags yet.</p>
+            <p className="text-theme-text-muted text-xs mt-1">Create tags to categorize your contacts.</p>
           </CardContent>
         </Card>
       ) : (
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-theme-bg-card border-theme-border shadow-sm ring-0 ring-transparent">
           <CardContent className="pt-4">
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
@@ -208,22 +181,22 @@ export function TagManager() {
 
       {/* New Tag Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-sm">
+        <DialogContent className="bg-theme-bg-card border-theme-border sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white">New Tag</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-theme-text">New Tag</DialogTitle>
+            <DialogDescription className="text-theme-text-muted">
               Create a new tag with a name and color.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-slate-300">Tag Name</Label>
+              <Label className="text-theme-text-secondary">Tag Name</Label>
               <Input
                 placeholder="e.g. VIP Customer"
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreate();
                 }}
@@ -231,13 +204,13 @@ export function TagManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Color</Label>
+              <Label className="text-theme-text-secondary">Color</Label>
               <div className="flex gap-2 flex-wrap">
                 {PRESET_COLORS.map((color) => (
                   <button
                     key={color.value}
                     onClick={() => setSelectedColor(color.value)}
-                    className="relative size-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    className="relative size-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-theme-bg-card"
                     style={{
                       backgroundColor: color.value,
                       boxShadow: selectedColor === color.value ? `0 0 0 2px rgb(15 23 42), 0 0 0 4px ${color.value}` : 'none',
@@ -250,7 +223,7 @@ export function TagManager() {
 
             {/* Preview */}
             <div className="space-y-2">
-              <Label className="text-slate-300">Preview</Label>
+              <Label className="text-theme-text-secondary">Preview</Label>
               <div>
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium"
@@ -270,11 +243,11 @@ export function TagManager() {
             </div>
           </div>
 
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter className="border-t border-theme-border pt-4">
             <Button
               variant="outline"
               onClick={() => setDialogOpen(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-theme-border text-theme-text hover:bg-theme-bg-hover"
             >
               Cancel
             </Button>
@@ -298,19 +271,19 @@ export function TagManager() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-sm">
+        <DialogContent className="bg-theme-bg-card border-theme-border sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Tag</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-theme-text">Delete Tag</DialogTitle>
+            <DialogDescription className="text-theme-text-muted">
               Are you sure you want to delete the tag &quot;{tagToDelete?.name}&quot;? This will remove
               it from all contacts. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter className="border-t border-theme-border pt-4">
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-theme-border text-theme-text hover:bg-theme-bg-hover"
             >
               Cancel
             </Button>

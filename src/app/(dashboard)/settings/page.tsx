@@ -36,45 +36,47 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">
+      <div className="px-4">
+        <h1 className="text-2xl font-bold text-theme-text">Settings</h1>
+        <p className="text-sm text-theme-text-muted mt-1">
           Manage your profile, WhatsApp® integration, message templates, and
           tags.
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
-        <TabsList className="bg-slate-900 border border-slate-700">
+        <div className="px-4">
+          <TabsList className="bg-theme-bg-secondary border border-theme-border">
           <TabsTrigger
             value="profile"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-theme-bg-card data-active:text-violet-500 dark:data-active:text-violet-400 text-theme-text-muted hover:text-theme-text"
           >
             <User className="size-4" />
             Profile
           </TabsTrigger>
           <TabsTrigger
             value="whatsapp"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-theme-bg-card data-active:text-violet-500 dark:data-active:text-violet-400 text-theme-text-muted hover:text-theme-text"
           >
             <Settings className="size-4" />
             WhatsApp Config
           </TabsTrigger>
           <TabsTrigger
             value="templates"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-theme-bg-card data-active:text-violet-500 dark:data-active:text-violet-400 text-theme-text-muted hover:text-theme-text"
           >
             <MessageSquare className="size-4" />
             Templates
           </TabsTrigger>
           <TabsTrigger
             value="tags"
-            className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+            className="data-active:bg-theme-bg-card data-active:text-violet-500 dark:data-active:text-violet-400 text-theme-text-muted hover:text-theme-text"
           >
             <Tag className="size-4" />
             Tags
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="profile" className="space-y-6">
           <ProfileForm />

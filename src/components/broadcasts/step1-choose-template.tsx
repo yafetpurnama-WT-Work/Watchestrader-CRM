@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { messageTemplates as messageTemplatesApi } from '@/lib/api';
 import { MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, FileText, ArrowRight } from 'lucide-react';
@@ -27,14 +27,9 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   useEffect(() => {
     async function fetchTemplates() {
       try {
-        const supabase = createClient();
-        const { data, error: fetchError } = await supabase
-          .from('message_templates')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (fetchError) throw fetchError;
-        setTemplates(data ?? []);
+        const res = await messageTemplatesApi.list();
+        const data = res.data?.data || res.data || [];
+        setTemplates(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load templates');
       } finally {

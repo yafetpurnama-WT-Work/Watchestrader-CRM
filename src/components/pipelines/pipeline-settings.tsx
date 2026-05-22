@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { createClient } from "@/lib/supabase/client";
+import { pipelines as pipelinesApi, pipelineStages as pipelineStagesApi, deals as dealsApi } from "@/lib/api";
 import type { Pipeline, PipelineStage } from "@/types";
 import {
   Dialog,
@@ -68,8 +68,7 @@ export function PipelineSettings({
   onStagesChanged,
   onCreateNewPipeline,
 }: PipelineSettingsProps) {
-  const supabase = createClient();
-
+  // Removed supabase
   const [name, setName] = useState(pipeline.name);
   const [localStages, setLocalStages] = useState<PipelineStage[]>(stages);
   const [newStageName, setNewStageName] = useState("");
@@ -105,114 +104,99 @@ export function PipelineSettings({
   async function handleSave() {
     setSaving(true);
 
-    // One upsert for all stages — batches N stage writes into a single
-    // round-trip. Previous implementation did N sequential UPDATEs which
-    // latency-scaled linearly with stage count.
-    const stageRows = localStages.map((s, i) => ({
-      id: s.id,
-      pipeline_id: s.pipeline_id,
-      name: s.name,
-      color: s.color,
-      position: i,
-    }));
+    try {
+      await pipelinesApi.update(pipeline.id, { name: name.trim() });
+      await Promise.all(
+        localStages.map((s, i) => 
+          pipelineStagesApi.update(pipeline.id, s.id, {
+            name: s.name,
+            color: s.color,
+            position: i,
+          })
+        )
+      );
 
-    const [renameRes, stagesRes] = await Promise.all([
-      supabase
-        .from("pipelines")
-        .update({ name: name.trim() })
-        .eq("id", pipeline.id),
-      supabase.from("pipeline_stages").upsert(stageRows, { onConflict: "id" }),
-    ]);
-
-    setSaving(false);
-
-    if (renameRes.error || stagesRes.error) {
+      setSaving(false);
+      onOpenChange(false);
+      onPipelinesChanged();
+      onStagesChanged();
+      toast.success("Pipeline saved");
+    } catch (err) {
+      setSaving(false);
       toast.error("Failed to save pipeline");
-      return;
     }
-
-    onOpenChange(false);
-    onPipelinesChanged();
-    onStagesChanged();
-    toast.success("Pipeline saved");
   }
 
   async function handleAddStage() {
     const trimmed = newStageName.trim();
     if (!trimmed) return;
-    const { data, error } = await supabase
-      .from("pipeline_stages")
-      .insert({
-        pipeline_id: pipeline.id,
+    
+    try {
+      const res = await pipelineStagesApi.create(pipeline.id, {
         name: trimmed,
         color: newStageColor,
         position: localStages.length,
-      })
-      .select()
-      .single();
-    if (error || !data) {
+      });
+      
+      const data = res.data?.data || res.data;
+      if (!data) throw new Error("No data returned");
+      
+      setLocalStages([...localStages, data as PipelineStage]);
+      setNewStageName("");
+      setNewStageColor(STAGE_COLORS[(localStages.length + 1) % STAGE_COLORS.length]);
+    } catch (err) {
       toast.error("Failed to add stage");
-      return;
     }
-    setLocalStages([...localStages, data as PipelineStage]);
-    setNewStageName("");
-    setNewStageColor(STAGE_COLORS[(localStages.length + 1) % STAGE_COLORS.length]);
   }
 
   async function handleRemoveStage(stageId: string) {
-    // Refuse to delete if deals still reference the stage (FK would fail).
-    const { count } = await supabase
-      .from("deals")
-      .select("id", { count: "exact", head: true })
-      .eq("stage_id", stageId);
-    if (count && count > 0) {
-      toast.error("Move or delete deals in this stage first");
-      return;
-    }
-    const { error } = await supabase
-      .from("pipeline_stages")
-      .delete()
-      .eq("id", stageId);
-    if (error) {
+    try {
+      // Refuse to delete if deals still reference the stage (FK would fail).
+      const dealsRes = await dealsApi.list({ stage_id: stageId });
+      const deals = dealsRes.data?.data || dealsRes.data || [];
+      
+      if (deals.length > 0) {
+        toast.error("Move or delete deals in this stage first");
+        return;
+      }
+      
+      await pipelineStagesApi.delete(pipeline.id, stageId);
+      setLocalStages(localStages.filter((s) => s.id !== stageId));
+    } catch (err) {
       toast.error("Failed to delete stage");
-      return;
     }
-    setLocalStages(localStages.filter((s) => s.id !== stageId));
   }
 
   async function handleDeletePipeline() {
     setDeleting(true);
-    // ON DELETE CASCADE handles deals + stages.
-    const { error } = await supabase
-      .from("pipelines")
-      .delete()
-      .eq("id", pipeline.id);
-    setDeleting(false);
-    if (error) {
+    try {
+      await pipelinesApi.delete(pipeline.id);
+      toast.success("Pipeline deleted");
+      onOpenChange(false);
+      onPipelinesChanged();
+    } catch (err) {
       toast.error("Failed to delete pipeline");
-      return;
+    } finally {
+      setDeleting(false);
     }
-    onOpenChange(false);
-    onPipelinesChanged();
-    toast.success("Pipeline deleted");
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-slate-900 border-slate-700 max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md bg-theme-bg-card border-theme-border max-h-[85vh] overflow-y-auto text-theme-text shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-white">Manage Pipeline</DialogTitle>
+          <DialogTitle className="text-theme-text">Manage Pipeline</DialogTitle>
         </DialogHeader>
 
         {showDeleteConfirm ? (
           <div className="py-4">
-            <div className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-red-400" />
+            <div className="flex items-center gap-3 rounded-lg border border-red-500/20 dark:border-red-500/30 bg-red-500/5 dark:bg-red-500/10 p-4">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
               <div>
-                <p className="text-sm font-medium text-red-400">
+                <p className="text-sm font-medium text-red-600 dark:text-red-400">
                   Delete Pipeline
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-theme-text-secondary">
                   This will archive all deals in this pipeline. This cannot be
                   undone.
                 </p>
@@ -222,7 +206,7 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
               >
                 Cancel
               </Button>
@@ -239,16 +223,16 @@ export function PipelineSettings({
           <>
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
-                <Label className="text-slate-300">Pipeline Name</Label>
+                <Label className="text-theme-text-secondary">Pipeline Name</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="border-slate-700 bg-slate-800 text-white"
+                  className="border-theme-border bg-theme-bg-secondary text-theme-text focus-visible:ring-violet-500"
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label className="text-slate-300">Stages</Label>
+                <Label className="text-theme-text-secondary">Stages</Label>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -292,7 +276,7 @@ export function PipelineSettings({
                       style={{
                         backgroundColor: color,
                         borderColor:
-                          newStageColor === color ? "white" : "transparent",
+                          newStageColor === color ? "#8b5cf6" : "transparent",
                       }}
                       aria-label={`Pick color ${color}`}
                     />
@@ -303,7 +287,7 @@ export function PipelineSettings({
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
                     placeholder="New stage name"
-                    className="border-slate-700 bg-slate-800 text-sm text-white"
+                    className="border-theme-border bg-theme-bg-secondary text-sm text-theme-text focus-visible:ring-violet-500 placeholder:text-theme-text-muted"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddStage();
                     }}
@@ -313,7 +297,7 @@ export function PipelineSettings({
                     size="sm"
                     onClick={handleAddStage}
                     disabled={!newStageName.trim()}
-                    className="shrink-0 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                    className="shrink-0 border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
                   >
                     <Plus className="mr-1 h-3 w-3" />
                     Add
@@ -324,14 +308,14 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={onCreateNewPipeline}
-                className="w-full border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="w-full border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
               >
                 <Plus className="mr-1 h-3 w-3" />
                 Create a new pipeline
               </Button>
             </div>
 
-            <DialogFooter className="border-slate-700 bg-slate-900/50">
+            <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/50 p-4 -mx-6 -mb-6 flex gap-2">
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteConfirm(true)}
@@ -342,7 +326,7 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
               >
                 Cancel
               </Button>
@@ -387,13 +371,13 @@ function SortableStageRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 p-2"
+      className="flex items-center gap-2 rounded-lg border border-theme-border bg-theme-bg-secondary p-2"
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none text-slate-500 hover:text-slate-300 active:cursor-grabbing"
+        className="cursor-grab touch-none text-theme-text-muted hover:text-theme-text-secondary active:cursor-grabbing"
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-4 w-4" />
@@ -402,13 +386,13 @@ function SortableStageRow({
       <Input
         value={stage.name}
         onChange={(e) => onNameChange(e.target.value)}
-        className="h-7 flex-1 border-transparent bg-transparent text-sm text-white focus:border-slate-600"
+        className="h-7 flex-1 border-transparent bg-transparent text-sm text-theme-text focus:border-theme-border focus-visible:ring-0 focus-visible:ring-offset-0 focus:bg-theme-bg-card"
       />
       <Button
         variant="ghost"
         size="icon-xs"
         onClick={onRemove}
-        className="text-slate-400 hover:text-red-400"
+        className="text-theme-text-muted hover:text-red-500 focus:bg-theme-bg-hover"
       >
         <Trash2 className="h-3 w-3" />
       </Button>
@@ -431,14 +415,14 @@ function ColorSwatch({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="h-4 w-4 rounded-full border border-slate-600"
+        className="h-4 w-4 rounded-full border border-theme-border"
         style={{ backgroundColor: value }}
         aria-label="Change color"
       />
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-6 z-20 flex flex-wrap gap-1 rounded-lg border border-slate-700 bg-slate-900 p-2 shadow-lg w-36">
+          <div className="absolute left-0 top-6 z-20 flex flex-wrap gap-1 rounded-lg border border-theme-border bg-theme-bg-card p-2 shadow-lg w-36">
             {colors.map((c) => (
               <button
                 key={c}
@@ -450,7 +434,7 @@ function ColorSwatch({
                 className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
                 style={{
                   backgroundColor: c,
-                  borderColor: c === value ? "white" : "transparent",
+                  borderColor: c === value ? "#8b5cf6" : "transparent",
                 }}
               />
             ))}

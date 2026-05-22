@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { contacts as contactsApi, tags as tagsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,6 @@ interface ContactWithTags extends Contact {
 }
 
 export default function ContactsPage() {
-  const supabase = createClient();
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,70 +74,31 @@ export default function ContactsPage() {
   const [tagsMap, setTagsMap] = useState<Record<string, Tag>>({});
 
   const fetchTags = useCallback(async () => {
-    const { data } = await supabase.from('tags').select('*');
-    if (data) {
+    try {
+      const res = await tagsApi.list();
+      const data = res.data?.data || res.data || [];
       const map: Record<string, Tag> = {};
-      data.forEach((t) => (map[t.id] = t));
+      (Array.isArray(data) ? data : []).forEach((t: Tag) => (map[t.id] = t));
       setTagsMap(map);
-    }
-  }, [supabase]);
+    } catch { /* ignore */ }
+  }, []);
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
+    try {
+      const params: Record<string, string> = { page: String(page + 1) };
+      if (search.trim()) params.search = search.trim();
 
-    const from = page * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-
-    let query = supabase
-      .from('contacts')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to);
-
-    if (search.trim()) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`name.ilike.${term},phone.ilike.${term},email.ilike.${term}`);
-    }
-
-    const { data, count, error } = await query;
-
-    if (error) {
+      const res = await contactsApi.list(params);
+      const paginated = res.data;
+      const data: ContactWithTags[] = paginated?.data || [];
+      setTotalCount(paginated?.total ?? data.length);
+      setContacts(data);
+    } catch {
       toast.error('Failed to load contacts');
-      setLoading(false);
-      return;
     }
-
-    setTotalCount(count ?? 0);
-
-    if (!data || data.length === 0) {
-      setContacts([]);
-      setLoading(false);
-      return;
-    }
-
-    // Fetch tags for these contacts
-    const contactIds = data.map((c) => c.id);
-    const { data: contactTags } = await supabase
-      .from('contact_tags')
-      .select('contact_id, tag_id')
-      .in('contact_id', contactIds);
-
-    const tagsByContact: Record<string, string[]> = {};
-    contactTags?.forEach((ct) => {
-      if (!tagsByContact[ct.contact_id]) tagsByContact[ct.contact_id] = [];
-      tagsByContact[ct.contact_id].push(ct.tag_id);
-    });
-
-    const enriched: ContactWithTags[] = data.map((c) => ({
-      ...c,
-      tags: (tagsByContact[c.id] ?? [])
-        .map((tid) => tagsMap[tid])
-        .filter(Boolean),
-    }));
-
-    setContacts(enriched);
     setLoading(false);
-  }, [supabase, page, search, tagsMap]);
+  }, [page, search]);
 
   // Load-once-on-mount-ish data fetches. Each setter inside runs
   // inside an async promise completion (Supabase await), not
@@ -160,13 +120,10 @@ export default function ContactsPage() {
     setFormOpen(true);
   }
 
-  async function openEditForm(contact: Contact) {
-    const { data } = await supabase
-      .from('contact_tags')
-      .select('*')
-      .eq('contact_id', contact.id);
+  async function openEditForm(contact: ContactWithTags) {
+    const tagEntries: ContactTag[] = (contact.tags || []).map((t) => ({ id: `${contact.id}-${t.id}`, contact_id: contact.id, tag_id: t.id }));
     setEditContact(contact);
-    setEditContactTags(data ?? []);
+    setEditContactTags(tagEntries);
     setFormOpen(true);
   }
 
@@ -183,19 +140,13 @@ export default function ContactsPage() {
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-
-    const { error } = await supabase
-      .from('contacts')
-      .delete()
-      .eq('id', deleteTarget.id);
-
-    if (error) {
-      toast.error('Failed to delete contact');
-    } else {
+    try {
+      await contactsApi.delete(deleteTarget.id);
       toast.success('Contact deleted');
       fetchContacts();
+    } catch {
+      toast.error('Failed to delete contact');
     }
-
     setDeleting(false);
     setDeleteConfirmOpen(false);
     setDeleteTarget(null);
@@ -208,10 +159,10 @@ export default function ContactsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Contacts</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-theme-text">Contacts</h1>
+          <p className="text-sm text-theme-text-muted mt-1">
             Manage your contact list. {totalCount > 0 && `${totalCount} total contacts.`}
           </p>
         </div>
@@ -235,7 +186,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-sm">
+      <div className="relative max-w-sm mx-4">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
         <Input
           value={search}

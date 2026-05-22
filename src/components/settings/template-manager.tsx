@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2, Loader2, RefreshCw } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { messageTemplates as templatesApi, whatsapp as whatsappApi } from '@/lib/api';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,16 +32,16 @@ const CATEGORIES = ['Marketing', 'Utility', 'Authentication'] as const;
 const HEADER_TYPES = ['text', 'image', 'video', 'document'] as const;
 
 const categoryColors: Record<string, string> = {
-  Marketing: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
-  Utility: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
-  Authentication: 'bg-amber-600/20 text-amber-400 border-amber-600/30',
+  Marketing: 'bg-purple-500/10 dark:bg-purple-600/20 text-purple-600 dark:text-purple-400 border-purple-500/20 dark:border-purple-600/30',
+  Utility: 'bg-blue-500/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border-blue-500/20 dark:border-blue-600/30',
+  Authentication: 'bg-amber-500/10 dark:bg-amber-600/20 text-amber-600 dark:text-amber-400 border-amber-500/20 dark:border-amber-600/30',
 };
 
 const statusColors: Record<string, string> = {
-  Draft: 'bg-slate-600/20 text-slate-400 border-slate-600/30',
-  Pending: 'bg-yellow-600/20 text-yellow-400 border-yellow-600/30',
-  Approved: 'bg-violet-600/20 text-violet-400 border-violet-600/30',
-  Rejected: 'bg-red-600/20 text-red-400 border-red-600/30',
+  Draft: 'bg-slate-500/10 dark:bg-slate-600/20 text-slate-600 dark:text-slate-400 border-slate-500/20 dark:border-slate-600/30',
+  Pending: 'bg-yellow-500/10 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 dark:border-yellow-600/30',
+  Approved: 'bg-violet-500/10 dark:bg-violet-600/20 text-violet-600 dark:text-violet-400 border-violet-500/20 dark:border-violet-600/30',
+  Rejected: 'bg-red-500/10 dark:bg-red-600/20 text-red-600 dark:text-red-400 border-red-500/20 dark:border-red-600/30',
 };
 
 interface TemplateFormData {
@@ -91,7 +91,6 @@ const COMMON_LANGUAGE_CODES = [
 ];
 
 export function TemplateManager() {
-  const supabase = createClient();
   const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -111,18 +110,12 @@ export function TemplateManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
-  async function fetchTemplates(userId: string) {
+  async function fetchTemplates(_userId: string) {
     try {
       setLoading(true);
-
-      const { data, error } = await supabase
-        .from('message_templates')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTemplates(data || []);
+      const res = await templatesApi.list();
+      const data = res.data?.data || res.data || [];
+      setTemplates(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch templates:', err);
       toast.error('Failed to load templates');
@@ -143,27 +136,14 @@ export function TemplateManager() {
 
     try {
       setSaving(true);
-      if (!user) {
-        toast.error('Not authenticated');
-        return;
-      }
-
-      const payload = {
-        user_id: user.id,
+      await templatesApi.create({
         name: form.name.trim(),
         category: form.category,
         language: form.language.trim() || 'en_US',
         body_text: form.body_text.trim(),
         header_type: form.header_type || null,
         footer_text: form.footer_text.trim() || null,
-        status: 'Draft' as const,
-      };
-
-      const { error } = await supabase
-        .from('message_templates')
-        .insert(payload);
-
-      if (error) throw error;
+      });
 
       toast.success('Template created successfully');
       setDialogOpen(false);
@@ -187,35 +167,14 @@ export function TemplateManager() {
     if (!user) return;
     setSyncing(true);
     try {
-      const res = await fetch('/api/whatsapp/templates/sync', {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || `Sync failed (HTTP ${res.status})`);
-      }
+      const res = await whatsappApi.syncTemplates();
+      const data = res.data;
       toast.success(
-        `Synced ${data.total} template${data.total === 1 ? '' : 's'} from Meta` +
+        `Synced ${data.total || 0} template${data.total === 1 ? '' : 's'} from Meta` +
           (data.inserted || data.updated
-            ? ` (${data.inserted} new, ${data.updated} updated)`
+            ? ` (${data.inserted || 0} new, ${data.updated || 0} updated)`
             : ''),
       );
-      if (Array.isArray(data.errors) && data.errors.length > 0) {
-        // Surface per-template failures so users don't trust a green
-        // toast that hides silent drift.
-        const preview = data.errors.slice(0, 3).map(
-          (e: { name: string; language: string; message: string }) =>
-            `${e.name} (${e.language})`,
-        );
-        const suffix =
-          data.errors.length > 3 ? `, +${data.errors.length - 3} more` : '';
-        toast.error(`Failed to sync: ${preview.join(', ')}${suffix}`);
-      }
-      if (data.truncated) {
-        toast.warning(
-          'Hit Meta pagination cap — more templates may exist. Contact support if this persists.',
-        );
-      }
       await fetchTemplates(user.id);
     } catch (err) {
       console.error('Template sync error:', err);
@@ -229,12 +188,7 @@ export function TemplateManager() {
 
   async function handleDelete(id: string) {
     try {
-      const { error } = await supabase
-        .from('message_templates')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await templatesApi.delete(id);
       toast.success('Template deleted');
       setTemplates((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
@@ -255,8 +209,8 @@ export function TemplateManager() {
     <div className="space-y-4 mt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-white">Message Templates</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="text-lg font-semibold text-theme-text">Message Templates</h2>
+          <p className="text-sm text-theme-text-muted">
             Create and manage your WhatsApp message templates. Meta requires
             every template to be approved in the WhatsApp Manager before it can
             be sent — use &quot;Sync from Meta&quot; to pull your approved list.
@@ -267,7 +221,7 @@ export function TemplateManager() {
             variant="outline"
             onClick={handleSyncFromMeta}
             disabled={syncing}
-            className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+            className="border-theme-border bg-transparent text-theme-text hover:bg-theme-bg-hover"
             title="Pull approved templates from your Meta WhatsApp Business Account"
           >
             <RefreshCw
@@ -289,20 +243,20 @@ export function TemplateManager() {
       </div>
 
       {templates.length === 0 ? (
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-theme-bg-card border-theme-border shadow-sm ring-0 ring-transparent">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-slate-400 text-sm">No templates yet.</p>
-            <p className="text-slate-500 text-xs mt-1">Create your first message template to get started.</p>
+            <p className="text-theme-text-muted text-sm">No templates yet.</p>
+            <p className="text-theme-text-muted text-xs mt-1">Create your first message template to get started.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-3">
           {templates.map((template) => (
-            <Card key={template.id} className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+            <Card key={template.id} className="bg-theme-bg-card border-theme-border shadow-sm ring-0 ring-transparent">
               <CardContent className="flex items-start justify-between pt-4">
                 <div className="space-y-2 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-medium text-white">{template.name}</h3>
+                    <h3 className="font-medium text-theme-text">{template.name}</h3>
                     <Badge
                       className={`text-xs border ${categoryColors[template.category] || ''}`}
                     >
@@ -314,19 +268,19 @@ export function TemplateManager() {
                       {template.status || 'Draft'}
                     </Badge>
                     {template.language && (
-                      <span className="text-xs text-slate-500 uppercase">{template.language}</span>
+                      <span className="text-xs text-theme-text-muted uppercase">{template.language}</span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-400 line-clamp-2">{template.body_text}</p>
+                  <p className="text-sm text-theme-text-muted line-clamp-2">{template.body_text}</p>
                   {template.footer_text && (
-                    <p className="text-xs text-slate-500 italic">{template.footer_text}</p>
+                    <p className="text-xs text-theme-text-muted italic">{template.footer_text}</p>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDelete(template.id)}
-                  className="text-slate-400 hover:text-red-400 hover:bg-red-950/30 shrink-0 ml-2"
+                  className="text-theme-text-muted hover:text-red-400 hover:bg-red-950/30 shrink-0 ml-2"
                 >
                   <Trash2 className="size-4" />
                 </Button>
@@ -338,40 +292,40 @@ export function TemplateManager() {
 
       {/* New Template Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-lg">
+        <DialogContent className="bg-theme-bg-card border-theme-border sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white">New Message Template</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogTitle className="text-theme-text">New Message Template</DialogTitle>
+            <DialogDescription className="text-theme-text-muted">
               Create a new WhatsApp message template.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-slate-300">Template Name</Label>
+              <Label className="text-theme-text-secondary">Template Name</Label>
               <Input
                 placeholder="e.g. order_confirmation"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-300">Category</Label>
+                <Label className="text-theme-text-secondary">Category</Label>
                 <Select
                   value={form.category}
                   onValueChange={(val) =>
                     setForm({ ...form, category: val as MessageTemplate['category'] })
                   }
                 >
-                  <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                  <SelectTrigger className="w-full bg-theme-bg-secondary border-theme-border text-theme-text">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-theme-bg-card border-theme-border">
                     {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat} className="text-white focus:bg-slate-700 focus:text-white">
+                      <SelectItem key={cat} value={cat} className="text-theme-text focus:bg-theme-bg-hover focus:text-theme-text">
                         {cat}
                       </SelectItem>
                     ))}
@@ -380,20 +334,20 @@ export function TemplateManager() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300">Language</Label>
+                <Label className="text-theme-text-secondary">Language</Label>
                 <Input
                   list="template-language-codes"
                   placeholder="en_US"
                   value={form.language}
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50"
                 />
                 <datalist id="template-language-codes">
                   {COMMON_LANGUAGE_CODES.map((code) => (
                     <option key={code} value={code} />
                   ))}
                 </datalist>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-theme-text-muted">
                   Must match the exact language code the template is approved
                   under on Meta — e.g. <code>en_US</code> and <code>en</code>{' '}
                   are distinct.
@@ -402,20 +356,20 @@ export function TemplateManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Header Type</Label>
+              <Label className="text-theme-text-secondary">Header Type</Label>
               <Select
                 value={form.header_type}
                 onValueChange={(val) => setForm({ ...form, header_type: val || '' })}
               >
-                <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="w-full bg-theme-bg-secondary border-theme-border text-theme-text">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="none" className="text-white focus:bg-slate-700 focus:text-white">
+                <SelectContent className="bg-theme-bg-card border-theme-border">
+                  <SelectItem value="none" className="text-theme-text focus:bg-theme-bg-hover focus:text-theme-text">
                     None
                   </SelectItem>
                   {HEADER_TYPES.map((type) => (
-                    <SelectItem key={type} value={type} className="text-white focus:bg-slate-700 focus:text-white">
+                    <SelectItem key={type} value={type} className="text-theme-text focus:bg-theme-bg-hover focus:text-theme-text">
                       {type.charAt(0).toUpperCase() + type.slice(1)}
                     </SelectItem>
                   ))}
@@ -424,32 +378,32 @@ export function TemplateManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Body Text</Label>
+              <Label className="text-theme-text-secondary">Body Text</Label>
               <Textarea
                 placeholder="Enter your template message body. Use {{1}}, {{2}} for variables."
                 value={form.body_text}
                 onChange={(e) => setForm({ ...form, body_text: e.target.value })}
                 rows={4}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 resize-none"
+                className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50 resize-none"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Footer Text</Label>
+              <Label className="text-theme-text-secondary">Footer Text</Label>
               <Input
                 placeholder="Optional footer text"
                 value={form.footer_text}
                 onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50"
               />
             </div>
           </div>
 
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter className="border-t border-theme-border pt-4">
             <Button
               variant="outline"
               onClick={() => setDialogOpen(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-theme-border text-theme-text hover:bg-theme-bg-hover"
             >
               Cancel
             </Button>

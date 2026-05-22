@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { customFields as customFieldsApi, contacts as contactsApi } from '@/lib/api';
 import { Contact, CustomField, MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,38 +67,38 @@ export function Step3Personalize({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const supabase = createClient();
-      const [fieldsRes, contactRes] = await Promise.all([
-        supabase.from('custom_fields').select('*').order('field_name'),
-        supabase
-          .from('contacts')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
-      if (cancelled) return;
+      try {
+        const [fieldsRes, contactsRes] = await Promise.all([
+          customFieldsApi.list(),
+          contactsApi.list(),
+        ]);
+        if (cancelled) return;
 
-      setCustomFields(fieldsRes.data ?? []);
-      setLoadingFields(false);
+        setCustomFields(fieldsRes.data?.data || fieldsRes.data || []);
+        setLoadingFields(false);
 
-      const contact = contactRes.data ?? null;
-      setFirstContact(contact);
+        const contactsData = contactsRes.data?.data || contactsRes.data || [];
+        const contact = Array.isArray(contactsData) && contactsData.length > 0 ? contactsData[0] : null;
 
-      if (contact) {
-        const { data: customVals } = await supabase
-          .from('contact_custom_values')
-          .select('custom_field_id, value')
-          .eq('contact_id', contact.id);
-        if (!cancelled) {
+        if (contact) {
+          const detailRes = await contactsApi.get(contact.id);
+          const fullContact = detailRes.data?.data || detailRes.data || contact;
+          setFirstContact(fullContact);
+
+          const customVals = fullContact.customValues || fullContact.contactCustomValues || [];
           const map = new Map<string, string>();
-          for (const row of customVals ?? []) {
-            map.set(row.custom_field_id, row.value ?? '');
+          for (const cv of customVals) {
+            map.set(cv.custom_field_id, cv.value || '');
           }
           setFirstContactCustomValues(map);
+        } else {
+          setFirstContact(null);
         }
+      } catch (err) {
+        console.error("Failed to load data for personalization preview:", err);
+      } finally {
+        if (!cancelled) setLoadingPreview(false);
       }
-      setLoadingPreview(false);
     })();
     return () => {
       cancelled = true;

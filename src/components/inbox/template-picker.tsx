@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { messageTemplates as messageTemplatesApi } from "@/lib/api";
 import type { MessageTemplate } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,37 +64,23 @@ export function TemplatePicker({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        if (!cancelled) {
-          setTemplates([]);
-          setLoading(false);
-        }
-        return;
+      
+      try {
+        const res = await messageTemplatesApi.list({ status: "Approved" });
+        if (cancelled) return;
+        
+        let data = res.data?.data || res.data || [];
+        if (!Array.isArray(data)) data = [];
+        
+        // Filter just in case the API didn't handle the query param
+        const approved = data.filter((t: any) => t.status === "Approved");
+        setTemplates(approved as MessageTemplate[]);
+      } catch (err) {
+        console.error("Failed to fetch templates:", err);
+        if (!cancelled) setTemplates([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      // Only Approved templates are sendable through Meta — anything else
-      // would 400 on the send route. Hide them rather than letting the
-      // user pick a template that will be rejected.
-      const { data, error } = await supabase
-        .from("message_templates")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "Approved")
-        .order("created_at", { ascending: false });
-
-      if (cancelled) return;
-      if (error) {
-        console.error("Failed to fetch templates:", error);
-        setTemplates([]);
-      } else {
-        setTemplates((data as MessageTemplate[]) ?? []);
-      }
-      setLoading(false);
     })();
 
     return () => {

@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   RotateCcw,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { whatsappConfig as configApi } from '@/lib/api';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,6 @@ type ConnectionStatus = 'connected' | 'disconnected' | 'unknown';
 type ResetReason = 'token_corrupted' | 'meta_api_error' | null;
 
 export function WhatsAppConfig() {
-  const supabase = createClient();
   const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -59,27 +58,22 @@ export function WhatsAppConfig() {
       ? `${window.location.origin}/api/whatsapp/webhook`
       : '';
 
-  const fetchConfig = useCallback(async (userId: string) => {
+  const fetchConfig = useCallback(async (_userId: string) => {
     setLoading(true);
     try {
-      // Load form values from Supabase (shows what's in DB)
-      const { data, error } = await supabase
-        .from('whatsapp_config')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const res = await configApi.get();
+      const data = res.data;
 
-      if (error) {
-        console.error('Failed to load config row:', error);
-      }
-
-      if (data) {
+      if (data && data.phone_number_id) {
         setConfig(data);
         setPhoneNumberId(data.phone_number_id || '');
         setWabaId(data.waba_id || '');
         setAccessToken(MASKED_TOKEN);
         setVerifyToken('');
         setTokenEdited(false);
+        setConnectionStatus(data.status === 'active' ? 'connected' : 'disconnected');
+        setResetReason(null);
+        setStatusMessage('');
       } else {
         setConfig(null);
         setPhoneNumberId('');
@@ -87,39 +81,18 @@ export function WhatsAppConfig() {
         setAccessToken('');
         setVerifyToken('');
         setTokenEdited(false);
-      }
-
-      // Then verify health via the API (decrypts token + pings Meta)
-      if (data) {
-        try {
-          const res = await fetch('/api/whatsapp/config', { method: 'GET' });
-          const payload = await res.json();
-
-          if (payload.connected) {
-            setConnectionStatus('connected');
-            setResetReason(null);
-            setStatusMessage('');
-          } else {
-            setConnectionStatus('disconnected');
-            setResetReason(payload.needs_reset ? 'token_corrupted' : payload.reason === 'meta_api_error' ? 'meta_api_error' : null);
-            setStatusMessage(payload.message || '');
-          }
-        } catch (err) {
-          console.error('Health check failed:', err);
-          setConnectionStatus('disconnected');
-        }
-      } else {
         setConnectionStatus('disconnected');
         setResetReason(null);
         setStatusMessage('');
       }
     } catch (err) {
       console.error('fetchConfig error:', err);
-      toast.error('Failed to load WhatsApp configuration');
+      setConfig(null);
+      setConnectionStatus('disconnected');
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -142,11 +115,6 @@ export function WhatsAppConfig() {
 
     try {
       setSaving(true);
-
-      // Always POST through the API — it verifies with Meta and encrypts
-      // the access_token server-side with ENCRYPTION_KEY. Skipping this
-      // and writing direct to Supabase stores the token in plaintext,
-      // which then fails decryption on every subsequent health check.
       const payload: Record<string, unknown> = {
         phone_number_id: phoneNumberId.trim(),
         waba_id: wabaId.trim() || null,
@@ -155,36 +123,10 @@ export function WhatsAppConfig() {
 
       if (tokenEdited && accessToken !== MASKED_TOKEN && accessToken.trim()) {
         payload.access_token = accessToken.trim();
-      } else if (config) {
-        // Existing config — reuse stored encrypted token by decrypting on the
-        // server. But our POST handler requires an access_token to verify
-        // with Meta. If the user didn't change the token, we need to signal
-        // that. Simplest: require token re-entry if they're updating.
-        toast.error('Please re-enter the Access Token to save changes');
-        setSaving(false);
-        return;
       }
 
-      const res = await fetch('/api/whatsapp/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error || 'Failed to save configuration');
-        setSaving(false);
-        return;
-      }
-
-      toast.success(
-        data.phone_info?.verified_name
-          ? `Connected to ${data.phone_info.verified_name}`
-          : 'Configuration saved successfully'
-      );
-
+      await configApi.save(payload);
+      toast.success('Configuration saved successfully');
       if (user) await fetchConfig(user.id);
     } catch (err) {
       console.error('Save error:', err);
@@ -197,23 +139,18 @@ export function WhatsAppConfig() {
   async function handleTestConnection() {
     try {
       setTesting(true);
-      const res = await fetch('/api/whatsapp/config', { method: 'GET' });
-      const payload = await res.json();
+      const res = await configApi.get();
+      const data = res.data;
 
-      if (payload.connected) {
+      if (data && data.status === 'active') {
         setConnectionStatus('connected');
         setResetReason(null);
         setStatusMessage('');
-        toast.success(
-          payload.phone_info?.verified_name
-            ? `Connected to ${payload.phone_info.verified_name}`
-            : 'API connection successful'
-        );
+        toast.success('API connection successful');
       } else {
         setConnectionStatus('disconnected');
-        setResetReason(payload.needs_reset ? 'token_corrupted' : payload.reason === 'meta_api_error' ? 'meta_api_error' : null);
-        setStatusMessage(payload.message || '');
-        toast.error(payload.message || 'API connection failed');
+        setStatusMessage('Connection check failed');
+        toast.error('API connection failed');
       }
     } catch (err) {
       console.error('Test connection error:', err);
@@ -231,14 +168,7 @@ export function WhatsAppConfig() {
 
     try {
       setResetting(true);
-      const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error || 'Failed to reset configuration');
-        return;
-      }
-
+      await configApi.delete();
       toast.success('Configuration cleared. You can now re-enter your credentials.');
       setConfig(null);
       setPhoneNumberId('');
@@ -312,18 +242,18 @@ export function WhatsAppConfig() {
         )}
 
         {/* Connection Status */}
-        <Alert className="bg-slate-900 border-slate-700">
+        <Alert className="bg-theme-bg-card border-theme-border shadow-sm">
           <div className="flex items-center gap-2">
             {connectionStatus === 'connected' ? (
               <CheckCircle2 className="size-4 text-violet-500" />
             ) : (
               <XCircle className="size-4 text-red-500" />
             )}
-            <AlertTitle className="text-white mb-0">
+            <AlertTitle className="text-theme-text mb-0">
               {connectionStatus === 'connected' ? 'Connected' : 'Not Connected'}
             </AlertTitle>
           </div>
-          <AlertDescription className="text-slate-400">
+          <AlertDescription className="text-theme-text-muted">
             {connectionStatus === 'connected'
               ? 'Your WhatsApp Business API is connected and ready to send/receive messages.'
               : statusMessage ||
@@ -332,36 +262,36 @@ export function WhatsAppConfig() {
         </Alert>
 
         {/* API Credentials */}
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-theme-bg-card border-theme-border shadow-sm ring-0 ring-transparent">
           <CardHeader>
-            <CardTitle className="text-white">API Credentials</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-theme-text">API Credentials</CardTitle>
+            <CardDescription className="text-theme-text-muted">
               Enter your Meta WhatsApp Business API credentials.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-slate-300">Phone Number ID</Label>
+              <Label className="text-theme-text-secondary">Phone Number ID</Label>
               <Input
                 placeholder="e.g. 100234567890123"
                 value={phoneNumberId}
                 onChange={(e) => setPhoneNumberId(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">WhatsApp Business Account ID</Label>
+              <Label className="text-theme-text-secondary">WhatsApp Business Account ID</Label>
               <Input
                 placeholder="e.g. 100234567890456"
                 value={wabaId}
                 onChange={(e) => setWabaId(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Permanent Access Token</Label>
+              <Label className="text-theme-text-secondary">Permanent Access Token</Label>
               <div className="relative">
                 <Input
                   type={showToken ? 'text' : 'password'}
@@ -377,32 +307,32 @@ export function WhatsAppConfig() {
                       setTokenEdited(true);
                     }
                   }}
-                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 pr-10"
+                  className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowToken(!showToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-theme-text-muted hover:text-theme-text transition-colors"
                 >
                   {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
               {config && !tokenEdited && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-theme-text-muted">
                   Token is hidden for security. Re-enter it to update configuration.
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-300">Webhook Verify Token</Label>
+              <Label className="text-theme-text-secondary">Webhook Verify Token</Label>
               <Input
                 placeholder="Create a custom verify token"
                 value={verifyToken}
                 onChange={(e) => setVerifyToken(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-theme-text-muted">
                 A custom string you create. Must match the token you set in Meta webhook settings.
               </p>
             </div>
@@ -410,27 +340,27 @@ export function WhatsAppConfig() {
         </Card>
 
         {/* Webhook URL */}
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-theme-bg-card border-theme-border shadow-sm ring-0 ring-transparent">
           <CardHeader>
-            <CardTitle className="text-white">Webhook Configuration</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-theme-text">Webhook Configuration</CardTitle>
+            <CardDescription className="text-theme-text-muted">
               Use this URL as your webhook callback in the Meta App Dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label className="text-slate-300">Webhook Callback URL</Label>
+              <Label className="text-theme-text-secondary">Webhook Callback URL</Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
                   value={webhookUrl}
-                  className="bg-slate-800 border-slate-700 text-slate-300 font-mono text-sm"
+                  className="bg-theme-bg-secondary border-theme-border text-theme-text-secondary font-mono text-sm"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleCopyWebhookUrl}
-                  className="shrink-0 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+                  className="shrink-0 border-theme-border text-theme-text hover:text-theme-text hover:bg-theme-bg-hover"
                 >
                   <Copy className="size-4" />
                 </Button>
@@ -459,7 +389,7 @@ export function WhatsAppConfig() {
             variant="outline"
             onClick={handleTestConnection}
             disabled={testing || !config}
-            className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800"
+            className="border-theme-border text-theme-text hover:text-theme-text hover:bg-theme-bg-hover"
           >
             {testing ? (
               <>
@@ -498,23 +428,23 @@ export function WhatsAppConfig() {
 
       {/* Setup Instructions Sidebar */}
       <div>
-        <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+        <Card className="bg-theme-bg-card border-theme-border shadow-sm ring-0 ring-transparent">
           <CardHeader>
-            <CardTitle className="text-white text-base">Setup Instructions</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-theme-text text-base">Setup Instructions</CardTitle>
+            <CardDescription className="text-theme-text-muted">
               Follow these steps to connect your WhatsApp Business API.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion>
-              <AccordionItem className="border-slate-700">
-                <AccordionTrigger className="text-slate-300 hover:text-white hover:no-underline">
+              <AccordionItem className="border-theme-border">
+                <AccordionTrigger className="text-theme-text-secondary hover:text-theme-text hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">1</span>
                     Create a Meta App
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-slate-400">
+                <AccordionContent className="text-theme-text-muted">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>Go to <span className="text-violet-400">developers.facebook.com</span></li>
                     <li>Click &quot;My Apps&quot; and then &quot;Create App&quot;</li>
@@ -524,14 +454,14 @@ export function WhatsAppConfig() {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem className="border-slate-700">
-                <AccordionTrigger className="text-slate-300 hover:text-white hover:no-underline">
+              <AccordionItem className="border-theme-border">
+                <AccordionTrigger className="text-theme-text-secondary hover:text-theme-text hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">2</span>
                     Add WhatsApp Product
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-slate-400">
+                <AccordionContent className="text-theme-text-muted">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>In your app dashboard, click &quot;Add Product&quot;</li>
                     <li>Find &quot;WhatsApp&quot; and click &quot;Set Up&quot;</li>
@@ -540,43 +470,43 @@ export function WhatsAppConfig() {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem className="border-slate-700">
-                <AccordionTrigger className="text-slate-300 hover:text-white hover:no-underline">
+              <AccordionItem className="border-theme-border">
+                <AccordionTrigger className="text-theme-text-secondary hover:text-theme-text hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">3</span>
                     Get API Credentials
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-slate-400">
+                <AccordionContent className="text-theme-text-muted">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>Go to WhatsApp &gt; API Setup</li>
-                    <li>Copy your <strong className="text-slate-200">Phone Number ID</strong></li>
-                    <li>Copy your <strong className="text-slate-200">WhatsApp Business Account ID</strong></li>
-                    <li>Generate a <strong className="text-slate-200">Permanent Access Token</strong> from Business Settings &gt; System Users</li>
+                    <li>Copy your <strong className="text-theme-text">Phone Number ID</strong></li>
+                    <li>Copy your <strong className="text-theme-text">WhatsApp Business Account ID</strong></li>
+                    <li>Generate a <strong className="text-theme-text">Permanent Access Token</strong> from Business Settings &gt; System Users</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem className="border-slate-700">
-                <AccordionTrigger className="text-slate-300 hover:text-white hover:no-underline">
+              <AccordionItem className="border-theme-border">
+                <AccordionTrigger className="text-theme-text-secondary hover:text-theme-text hover:no-underline">
                   <span className="flex items-center gap-2">
                     <span className="flex size-5 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">4</span>
                     Configure Webhooks
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-slate-400">
+                <AccordionContent className="text-theme-text-muted">
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>Go to WhatsApp &gt; Configuration</li>
                     <li>Click &quot;Edit&quot; on the Webhook section</li>
-                    <li>Paste the <strong className="text-slate-200">Webhook Callback URL</strong> from above</li>
-                    <li>Enter the same <strong className="text-slate-200">Verify Token</strong> you set here</li>
+                    <li>Paste the <strong className="text-theme-text">Webhook Callback URL</strong> from above</li>
+                    <li>Enter the same <strong className="text-theme-text">Verify Token</strong> you set here</li>
                     <li>Subscribe to &quot;messages&quot; webhook field</li>
                   </ol>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
 
-            <div className="mt-4 pt-4 border-t border-slate-700">
+            <div className="mt-4 pt-4 border-t border-theme-border">
               <a
                 href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
                 target="_blank"

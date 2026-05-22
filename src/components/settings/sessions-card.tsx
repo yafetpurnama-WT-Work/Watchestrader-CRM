@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, LogOut } from 'lucide-react';
 
-import { createClient } from '@/lib/supabase/client';
+import { auth, removeAuthToken } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,21 +23,14 @@ import {
 } from '@/components/ui/dialog';
 
 export function SessionsCard() {
-  const supabase = createClient();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   const onConfirm = async () => {
     setSigningOut(true);
     try {
-      // scope: 'global' revokes every refresh token for this user
-      // across all devices; the next auth-state change on this tab
-      // triggers the usual redirect.
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-      if (error) {
-        toast.error(`Sign-out failed: ${error.message}`);
-        return;
-      }
+      await auth.revokeAll();
+      removeAuthToken();
       window.location.href = '/login';
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -49,13 +42,13 @@ export function SessionsCard() {
 
   return (
     <>
-      <Card className="bg-slate-900/40 border-slate-800">
+      <Card className="bg-theme-bg-card border-theme-border shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
+          <CardTitle className="flex items-center gap-2 text-theme-text">
             <LogOut className="size-4 text-violet-400" />
             Active sessions
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-theme-text-muted">
             Sign out of every device where you&apos;re logged in — including
             this one. Useful if you lost a laptop or shared your password.
           </CardDescription>

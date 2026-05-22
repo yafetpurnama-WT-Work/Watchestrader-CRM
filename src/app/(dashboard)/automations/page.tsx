@@ -18,7 +18,7 @@ import {
   Loader2,
 } from "lucide-react"
 
-import { createClient } from "@/lib/supabase/client"
+import { automations as automationsApi } from "@/lib/api"
 import type { Automation } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -64,13 +64,9 @@ export default function AutomationsPage() {
 
   async function load() {
     try {
-      const supabase = createClient()
-      const { data, error: fetchErr } = await supabase
-        .from("automations")
-        .select("*")
-        .order("created_at", { ascending: false })
-      if (fetchErr) throw fetchErr
-      setAutomations((data ?? []) as Automation[])
+      const res = await automationsApi.list()
+      const data = res.data?.data || res.data || []
+      setAutomations((Array.isArray(data) ? data : []) as Automation[])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load automations")
     }
@@ -81,51 +77,42 @@ export default function AutomationsPage() {
   }, [])
 
   async function toggleActive(a: Automation, next: boolean) {
-    // Optimistic flip so the switch feels instant.
     setAutomations((prev) =>
       prev?.map((x) => (x.id === a.id ? { ...x, is_active: next } : x)) ?? prev,
     )
-    const res = await fetch(`/api/automations/${a.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ is_active: next }),
-    })
-    if (!res.ok) {
-      // Roll back on error.
+    try {
+      await automationsApi.toggle(a.id)
+      toast.success(next ? "Automation activated" : "Automation paused")
+    } catch (err: any) {
       setAutomations((prev) =>
         prev?.map((x) => (x.id === a.id ? { ...x, is_active: !next } : x)) ?? prev,
       )
-      const body = await res.json().catch(() => ({}))
-      toast.error(body?.error ?? "Failed to update")
-      return
+      toast.error(err?.message ?? "Failed to update")
     }
-    toast.success(next ? "Automation activated" : "Automation paused")
   }
 
   async function duplicate(a: Automation) {
-    const res = await fetch(`/api/automations/${a.id}/duplicate`, { method: "POST" })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      toast.error(body?.error ?? "Failed to duplicate")
-      return
+    try {
+      await automationsApi.duplicate(a.id)
+      toast.success("Automation duplicated")
+      load()
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to duplicate")
     }
-    toast.success("Automation duplicated")
-    load()
   }
 
   async function confirmDelete() {
     if (!pendingDelete) return
     setDeleting(true)
-    const res = await fetch(`/api/automations/${pendingDelete.id}`, { method: "DELETE" })
-    setDeleting(false)
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      toast.error(body?.error ?? "Failed to delete")
-      return
+    try {
+      await automationsApi.delete(pendingDelete.id)
+      toast.success("Automation deleted")
+      setPendingDelete(null)
+      load()
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to delete")
     }
-    toast.success("Automation deleted")
-    setPendingDelete(null)
-    load()
+    setDeleting(false)
   }
 
   async function startFromTemplate(slug: TemplateSlug) {
@@ -155,7 +142,7 @@ export default function AutomationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Automations</h1>
           <p className="mt-1 text-sm text-slate-400">
@@ -173,7 +160,7 @@ export default function AutomationsPage() {
 
       {showTemplates && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-slate-300">Quick-start templates</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-300 px-4">Quick-start templates</h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {TEMPLATE_ORDER.map((slug) => {
               const t = AUTOMATION_TEMPLATES[slug]

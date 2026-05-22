@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 
-import { createClient } from "@/lib/supabase/client"
+import { automations as automationsApi } from "@/lib/api"
 import type {
   Automation,
   AutomationLog,
@@ -37,24 +37,13 @@ export default function AutomationLogsPage({
   useEffect(() => {
     async function load() {
       try {
-        const supabase = createClient()
         const [autRes, logRes] = await Promise.all([
-          supabase
-            .from("automations")
-            .select("*")
-            .eq("id", id)
-            .maybeSingle(),
-          supabase
-            .from("automation_logs")
-            .select("*, contact:contacts(id, name, phone)")
-            .eq("automation_id", id)
-            .order("created_at", { ascending: false })
-            .limit(100),
+          automationsApi.get(id),
+          automationsApi.getLogs(id),
         ])
-        if (autRes.error) throw autRes.error
-        if (logRes.error) throw logRes.error
         setAutomation(autRes.data as Automation | null)
-        setLogs((logRes.data ?? []) as AutomationLog[])
+        const logData = logRes.data?.data || logRes.data || []
+        setLogs((Array.isArray(logData) ? logData : []) as AutomationLog[])
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load logs")
       }

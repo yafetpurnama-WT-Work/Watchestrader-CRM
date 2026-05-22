@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { auth, setAuthToken } from "@/lib/api";
+import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MessageSquare, CheckCircle } from "lucide-react";
+import { CheckCircle, Sun, Moon } from "lucide-react";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
@@ -23,7 +24,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const supabase = createClient();
+  const { theme, toggleTheme } = useTheme();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,40 +42,36 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    if (error) {
-      setError(error.message);
+    try {
+      const res = await auth.register({
+        full_name: fullName,
+        email,
+        password,
+        password_confirmation: confirmPassword,
+      });
+      setAuthToken(res.data.token);
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setSuccess(true);
-    setLoading(false);
   };
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-        <Card className="w-full max-w-md border-slate-800 bg-slate-900">
+      <div className="flex min-h-screen items-center justify-center bg-theme-bg px-4 transition-colors duration-200">
+        <Card className="w-full max-w-md border-theme-border bg-theme-bg-card">
           <CardHeader className="items-center text-center">
             <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
               <CheckCircle className="h-6 w-6 text-violet-500" />
             </div>
-            <CardTitle className="text-xl text-white">
+            <CardTitle className="text-xl text-theme-text">
               Check your email
             </CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-theme-text-muted">
               We&apos;ve sent a confirmation link to{" "}
-              <span className="text-white">{email}</span>. Please check your
+              <span className="text-theme-text">{email}</span>. Please check your
               inbox and click the link to verify your account.
             </CardDescription>
           </CardHeader>
@@ -82,7 +79,7 @@ export default function SignupPage() {
             <Link href="/login">
               <Button
                 variant="outline"
-                className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="w-full border-theme-border text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
               >
                 Back to sign in
               </Button>
@@ -94,15 +91,32 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <Card className="w-full max-w-md border-slate-800 bg-slate-900">
+    <div className="flex min-h-screen items-center justify-center bg-theme-bg px-4 transition-colors duration-200">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        className="fixed right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-theme-bg-card text-theme-text-secondary shadow-lg transition-colors hover:bg-theme-bg-hover hover:text-theme-text"
+      >
+        {theme === "dark" ? (
+          <Sun className="h-5 w-5" />
+        ) : (
+          <Moon className="h-5 w-5" />
+        )}
+      </button>
+
+      <Card className="w-full max-w-md border-theme-border bg-theme-bg-card">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
-            <MessageSquare className="h-6 w-6 text-violet-500" />
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-theme-bg-secondary p-1">
+            <img
+              src="/company_logo.png"
+              className="h-14 w-14 object-contain rounded-lg"
+              alt="Watches Traders Logo"
+            />
           </div>
-          <CardTitle className="text-xl text-white">Create account</CardTitle>
-          <CardDescription className="text-slate-400">
-            Get started with CRM Template for WhatsApp
+          <CardTitle className="text-xl text-theme-text">Create account</CardTitle>
+          <CardDescription className="text-theme-text-muted">
+            Get started with CRM Watches Traders
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -114,7 +128,7 @@ export default function SignupPage() {
             )}
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="fullName" className="text-slate-300">
+              <Label htmlFor="fullName" className="text-theme-text-secondary">
                 Full name
               </Label>
               <Input
@@ -124,12 +138,12 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                className="border-theme-border bg-theme-bg-secondary text-theme-text placeholder:text-theme-text-muted focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-slate-300">
+              <Label htmlFor="email" className="text-theme-text-secondary">
                 Email
               </Label>
               <Input
@@ -139,12 +153,12 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                className="border-theme-border bg-theme-bg-secondary text-theme-text placeholder:text-theme-text-muted focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password" className="text-slate-300">
+              <Label htmlFor="password" className="text-theme-text-secondary">
                 Password
               </Label>
               <Input
@@ -154,12 +168,12 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                className="border-theme-border bg-theme-bg-secondary text-theme-text placeholder:text-theme-text-muted focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="confirmPassword" className="text-slate-300">
+              <Label htmlFor="confirmPassword" className="text-theme-text-secondary">
                 Confirm password
               </Label>
               <Input
@@ -169,7 +183,7 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                className="border-theme-border bg-theme-bg-secondary text-theme-text placeholder:text-theme-text-muted focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
               />
             </div>
 
@@ -182,7 +196,7 @@ export default function SignupPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-400">
+          <p className="mt-6 text-center text-sm text-theme-text-muted">
             Already have an account?{" "}
             <Link
               href="/login"

@@ -1,16 +1,24 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+/**
+ * @deprecated — Supabase admin client replaced by Laravel API.
+ * This stub prevents server-side API routes from crashing on import.
+ * All automation logic will be moved to Laravel controllers.
+ */
 
-// Lazy, shared service-role client for automation engine work.
-// Mirrors the pattern used by the webhook handler
-// (src/app/api/whatsapp/webhook/route.ts).
-let _adminClient: SupabaseClient | null = null
-
-export function supabaseAdmin(): SupabaseClient {
-  if (!_adminClient) {
-    _adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    )
-  }
-  return _adminClient
+export function supabaseAdmin(): any {
+  return new Proxy({}, {
+    get(_, prop) {
+      if (prop === 'from') {
+        return () => new Proxy({}, {
+          get() {
+            return () => new Proxy({}, {
+              get() {
+                return () => ({ data: null, error: { message: 'Supabase removed. Use Laravel API.' } })
+              }
+            })
+          }
+        })
+      }
+      return () => ({ data: null, error: { message: 'Supabase removed.' } })
+    }
+  })
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/hooks/use-theme";
 import "./globals.css";
 
 const inter = Inter({
@@ -10,16 +11,16 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "CRM Watches Traders",
+    template: "%s — CRM Watches Traders",
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: "Self-hostable CRM template for WhatsApp and CRM Watches Traders.",
   robots: {
     index: false,
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    icon: [{ url: "/company_logo.png" }],
   },
   formatDetection: {
     email: false,
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#020617",
-  colorScheme: "dark",
+  colorScheme: "dark light",
 };
 
 export default function RootLayout({
@@ -39,17 +40,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full bg-slate-950 text-white font-sans">
-        {children}
+    <html lang="en" className={`${inter.variable} dark h-full antialiased`}>
+      <body className="min-h-full bg-theme-bg text-theme-text font-sans transition-colors duration-200">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
         <Toaster
           theme="dark"
           position="top-right"
           toastOptions={{
             style: {
-              background: "rgb(30 41 59)",
-              border: "1px solid rgb(51 65 85)",
-              color: "white",
+              background: "var(--theme-bg-card)",
+              border: "1px solid var(--theme-border)",
+              color: "var(--theme-text)",
             },
           }}
         />
