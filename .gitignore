@@ -30,11 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
-# keep example files so forkers have a template to copy
-!.env.local.example
-!.env.example
 
 # vercel
 .vercel
@@ -43,4 +40,17 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# database dumps
 defaultdb-22may2026.sql
+
+# template-era files (archived to draft-progress-yafet/)
+.env.local.example
+AGENTS.md
+CHANGELOG.md
+CLAUDE.md
+CONTRIBUTING.md
+LICENSE
+/.github/
+
+# draft/archive folder (local only)
+/draft-progress-yafet/
