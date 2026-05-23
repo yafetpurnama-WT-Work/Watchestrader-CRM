@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -40,6 +40,7 @@ import {
 import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/automations/templates"
 import { triggerMeta, formatRelative } from "@/lib/automations/trigger-meta"
 import { cn } from "@/lib/utils"
+import { TablePagination } from "@/components/ui/table-pagination"
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
   "welcome_message",
@@ -61,20 +62,27 @@ export default function AutomationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Automation | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
-      const res = await automationsApi.list()
-      const data = res.data?.data || res.data || []
+      const res = await automationsApi.list({ page: String(page), per_page: String(perPage) })
+      const paginated = res.data
+      const data = paginated?.data || []
       setAutomations((Array.isArray(data) ? data : []) as Automation[])
+      setTotalPages(paginated?.last_page || 1)
+      setTotalItems(paginated?.total || 0)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load automations")
     }
-  }
+  }, [page, perPage])
 
   useEffect(() => {
     load()
-  }, [])
+  }, [load])
 
   async function toggleActive(a: Automation, next: boolean) {
     setAutomations((prev) =>
@@ -207,6 +215,17 @@ export default function AutomationsPage() {
             />
           ))}
         </ul>
+      )}
+
+      {automations.length > 0 && (
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          perPage={perPage}
+          onPageChange={setPage}
+          onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+        />
       )}
 
       <Dialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>

@@ -125,6 +125,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/rbac",
+        destination: "/roles-access",
+        permanent: true,
+      },
+      {
+        source: "/kelola-akses",
+        destination: "/roles-access",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -40,7 +40,6 @@ class CompanyController extends Controller
         try {
             $company = Company::create(array_merge($validated, [
                 'created_by' => $request->user()->id,
-                'updated_by' => $request->user()->id,
             ]));
             return response()->json(['success' => true, 'data' => $company, 'message' => 'Company created.'], 201);
         } catch (\Exception $e) {
@@ -51,7 +50,7 @@ class CompanyController extends Controller
     public function show(string $id)
     {
         try {
-            $company = Company::with('outlets')->withCount(['users'])->findOrFail($id);
+            $company = Company::with(['outlets', 'creator', 'updater'])->withCount(['users'])->findOrFail($id);
             return response()->json(['success' => true, 'data' => $company, 'message' => 'Company retrieved.']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'data' => null, 'message' => $e->getMessage()], 404);

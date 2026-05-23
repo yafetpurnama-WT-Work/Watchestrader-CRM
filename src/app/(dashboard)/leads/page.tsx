@@ -14,6 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import { leads as leadsApi, leadSources as sourcesApi } from "@/lib/api";
+import { TablePagination } from "@/components/ui/table-pagination";
 import type { Lead, LeadSource, LeadStatus } from "@/types";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -35,11 +36,12 @@ export default function LeadsPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterSource, setFilterSource] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: String(page), per_page: "25" };
+      const params: Record<string, string> = { page: String(page), per_page: String(perPage) };
       if (search) params.search = search;
       if (filterStatus) params.status = filterStatus;
       if (filterSource) params.source_id = filterSource;
@@ -50,7 +52,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, filterStatus, filterSource]);
+  }, [page, search, filterStatus, filterSource, perPage]);
 
   useEffect(() => {
     fetchLeads();
@@ -70,14 +72,12 @@ export default function LeadsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-theme-text flex items-center gap-2">
-            <Target className="h-7 w-7 text-violet-500" />
-            Leads
-          </h1>
-          <p className="mt-1 text-sm text-theme-text-muted">
-            Track and manage your sales leads
-          </p>
+        <div className="flex items-center gap-1 px-2">
+          <Target size={52} className="text-violet-500 shrink-0" />
+          <div>
+            <h1 className="text-2xl font-bold text-theme-text">Leads</h1>
+            <p className="mt-0.5 text-sm text-theme-text-muted">Track and manage your sales leads</p>
+          </div>
         </div>
         {can("leads.create") && (
           <button className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-md hover:bg-violet-700 transition-colors">
@@ -246,29 +246,14 @@ export default function LeadsPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-theme-border px-4 py-3">
-            <p className="text-xs text-theme-text-muted">
-              Page {data?.current_page || 1} of {totalPages} · {data?.total || 0} total
-            </p>
-            <div className="flex gap-1">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover"
-              >
-                Previous
-              </button>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={data?.total || 0}
+          perPage={perPage}
+          onPageChange={setPage}
+          onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+        />
       </div>
     </div>
   );

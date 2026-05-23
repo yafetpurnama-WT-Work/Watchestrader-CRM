@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerStatusHistory;
+use App\Models\Contact;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -18,8 +19,8 @@ class CustomerController extends Controller
             if ($search = $request->query('search')) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
                 });
             }
 
@@ -74,8 +75,26 @@ class CustomerController extends Controller
         try {
             $customer = Customer::create(array_merge($validated, [
                 'created_by' => $request->user()->id,
-                'updated_by' => $request->user()->id,
             ]));
+
+            // Auto-sync to Contact
+            $companyName = $customer->company ? $customer->company->name : null;
+            if (!$companyName && $customer->outlet && $customer->outlet->company) {
+                $companyName = $customer->outlet->company->name;
+            }
+
+            Contact::firstOrCreate(
+                [
+                    'phone' => $customer->phone,
+                    'user_id' => $request->user()->id,
+                ],
+                [
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'company' => $companyName,
+                    'customer_id' => $customer->id,
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -91,8 +110,16 @@ class CustomerController extends Controller
     {
         try {
             $customer = Customer::with([
-                'status', 'outlet', 'company', 'assignedSales',
-                'province', 'city', 'district', 'village',
+                'status',
+                'outlet',
+                'company',
+                'assignedSales',
+                'province',
+                'city',
+                'district',
+                'village',
+                'creator',
+                'updater',
             ])->findOrFail($id);
 
             return response()->json(['success' => true, 'data' => $customer, 'message' => 'Customer retrieved.']);
@@ -133,6 +160,16 @@ class CustomerController extends Controller
         try {
             $customer = Customer::findOrFail($id);
             $customer->update(array_merge($validated, ['updated_by' => $request->user()->id]));
+
+            // Auto-sync updates to Contact
+            $contact = Contact::where('customer_id', $customer->id)->first();
+            if ($contact) {
+                $contact->update([
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'phone' => $customer->phone,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

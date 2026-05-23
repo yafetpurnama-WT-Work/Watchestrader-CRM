@@ -18,6 +18,17 @@ export interface Profile {
   created_at: string;
 }
 
+/**
+ * Lightweight user object returned by the `creator` / `updater` Eloquent
+ * relationships on any model that uses the Auditable trait.
+ */
+export interface AuditUser {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+}
+
 export interface Contact {
   id: string;
   user_id: string;
@@ -26,6 +37,10 @@ export interface Contact {
   email?: string;
   company?: string;
   avatar_url?: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  creator?: AuditUser | null;
+  updater?: AuditUser | null;
   created_at: string;
   updated_at: string;
 }

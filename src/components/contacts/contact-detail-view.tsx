@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { contacts as contactsApi, tags as tagsApi, contactNotes as contactNotesApi, customFields as customFieldsApi } from '@/lib/api';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
+import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal, AuditUser } from '@/types';
 import {
   Sheet,
   SheetContent,
@@ -31,6 +31,8 @@ import {
   Save,
   X,
   DollarSign,
+  UserCircle,
+  Clock,
 } from 'lucide-react';
 
 interface ContactDetailViewProps {
@@ -299,7 +301,7 @@ export function ContactDetailView({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-slate-900 border-slate-700 text-slate-200 sm:max-w-lg w-full p-0"
+        className="bg-theme-bg-card border-theme-border text-theme-text sm:max-w-lg w-full p-0"
       >
         {loading || !contact ? (
           <div className="flex items-center justify-center h-full">
@@ -308,21 +310,21 @@ export function ContactDetailView({
         ) : (
           <div className="flex flex-col h-full">
             {/* Header */}
-            <SheetHeader className="p-4 border-b border-slate-700/50">
+            <SheetHeader className="p-4 border-b border-theme-border/50">
               <div className="flex items-center gap-3">
-                <Avatar className="size-12 bg-slate-800 border border-slate-700">
+                <Avatar className="size-12 bg-theme-bg-secondary border border-theme-border">
                   <AvatarFallback className="bg-violet-500/10 text-violet-400 text-sm font-medium">
                     {getInitials(contact.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <SheetTitle className="text-white truncate">
+                  <SheetTitle className="text-theme-text truncate">
                     {contact.name || 'Unknown'}
                   </SheetTitle>
-                  <SheetDescription className="text-slate-400 text-xs mt-0.5">
+                  <SheetDescription className="text-theme-text-muted text-xs mt-0.5">
                     Contact details
                   </SheetDescription>
-                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-400">
+                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-theme-text-secondary">
                     <button
                       onClick={copyPhone}
                       className="flex items-center gap-1 hover:text-violet-400 transition-colors cursor-pointer"
@@ -354,34 +356,34 @@ export function ContactDetailView({
 
             {/* Tabs */}
             <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="bg-slate-800/50 border-b border-slate-700 mx-4 mt-3">
+              <TabsList className="bg-theme-bg-secondary/50 border-b border-theme-border mx-4 mt-3">
                 <TabsTrigger
                   value="details"
-                  className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+                  className="data-active:bg-theme-bg-secondary data-active:text-violet-400 text-theme-text-secondary"
                 >
                   Details
                 </TabsTrigger>
                 <TabsTrigger
                   value="tags"
-                  className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+                  className="data-active:bg-theme-bg-secondary data-active:text-violet-400 text-theme-text-secondary"
                 >
                   Tags
                 </TabsTrigger>
                 <TabsTrigger
                   value="notes"
-                  className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+                  className="data-active:bg-theme-bg-secondary data-active:text-violet-400 text-theme-text-secondary"
                 >
                   Notes
                 </TabsTrigger>
                 <TabsTrigger
                   value="custom"
-                  className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+                  className="data-active:bg-theme-bg-secondary data-active:text-violet-400 text-theme-text-secondary"
                 >
                   Custom Fields
                 </TabsTrigger>
                 <TabsTrigger
                   value="deals"
-                  className="data-active:bg-slate-800 data-active:text-violet-400 text-slate-400"
+                  className="data-active:bg-theme-bg-secondary data-active:text-violet-400 text-theme-text-secondary"
                 >
                   Deals
                 </TabsTrigger>
@@ -391,37 +393,37 @@ export function ContactDetailView({
               <TabsContent value="details" className="flex-1 overflow-y-auto px-4 py-3">
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label className="text-slate-400 text-xs">Name</Label>
+                    <Label className="text-theme-text-secondary text-xs">Name</Label>
                     <Input
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white h-8 text-sm"
+                      className="bg-theme-bg-secondary border-theme-border text-theme-text h-8 text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-slate-400 text-xs">
+                    <Label className="text-theme-text-secondary text-xs">
                       Phone <span className="text-red-400">*</span>
                     </Label>
                     <Input
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white h-8 text-sm"
+                      className="bg-theme-bg-secondary border-theme-border text-theme-text h-8 text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-slate-400 text-xs">Email</Label>
+                    <Label className="text-theme-text-secondary text-xs">Email</Label>
                     <Input
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white h-8 text-sm"
+                      className="bg-theme-bg-secondary border-theme-border text-theme-text h-8 text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-slate-400 text-xs">Company</Label>
+                    <Label className="text-theme-text-secondary text-xs">Company</Label>
                     <Input
                       value={editCompany}
                       onChange={(e) => setEditCompany(e.target.value)}
-                      className="bg-slate-800 border-slate-700 text-white h-8 text-sm"
+                      className="bg-theme-bg-secondary border-theme-border text-theme-text h-8 text-sm"
                     />
                   </div>
                   <Button
@@ -443,11 +445,11 @@ export function ContactDetailView({
               {/* Tags Tab */}
               <TabsContent value="tags" className="flex-1 overflow-y-auto px-4 py-3">
                 <div className="space-y-3">
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-theme-text-muted">
                     Click a tag to add or remove it from this contact.
                   </p>
                   {allTags.length === 0 ? (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-theme-text-muted">
                       No tags available. Create tags in Settings.
                     </p>
                   ) : (
@@ -461,7 +463,7 @@ export function ContactDetailView({
                             disabled={savingTags}
                             className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
                               selected
-                                ? 'ring-2 ring-violet-500 ring-offset-1 ring-offset-slate-900'
+                                ? 'ring-2 ring-violet-500 ring-offset-1 ring-offset-theme-bg-card'
                                 : 'opacity-50 hover:opacity-80'
                             }`}
                             style={{
@@ -486,7 +488,7 @@ export function ContactDetailView({
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder="Write a note..."
-                    className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 min-h-[60px] text-sm resize-none"
+                    className="bg-theme-bg-secondary border-theme-border text-theme-text placeholder:text-theme-text-muted/50 min-h-[60px] text-sm resize-none"
                   />
                   <Button
                     onClick={addNote}
@@ -506,30 +508,30 @@ export function ContactDetailView({
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {loadingNotes ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="size-5 animate-spin text-slate-500" />
+                      <Loader2 className="size-5 animate-spin text-theme-text-muted" />
                     </div>
                   ) : notes.length === 0 ? (
-                    <p className="text-sm text-slate-500 text-center py-8">
+                    <p className="text-sm text-theme-text-muted text-center py-8">
                       No notes yet.
                     </p>
                   ) : (
                     notes.map((note) => (
                       <div
                         key={note.id}
-                        className="rounded-lg bg-slate-800/50 border border-slate-700/50 p-3 group"
+                        className="rounded-lg bg-theme-bg-secondary/50 border border-theme-border/50 p-3 group"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm text-slate-300 whitespace-pre-wrap flex-1">
+                          <p className="text-sm text-theme-text-secondary whitespace-pre-wrap flex-1">
                             {note.note_text}
                           </p>
                           <button
                             onClick={() => deleteNote(note.id)}
-                            className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all cursor-pointer shrink-0"
+                            className="opacity-0 group-hover:opacity-100 text-theme-text-muted hover:text-red-400 transition-all cursor-pointer shrink-0"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
                         </div>
-                        <p className="text-xs text-slate-500 mt-1.5">
+                        <p className="text-xs text-theme-text-muted mt-1.5">
                           {new Date(note.created_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -548,17 +550,17 @@ export function ContactDetailView({
               <TabsContent value="custom" className="flex-1 overflow-y-auto px-4 py-3">
                 {loadingCustom ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-slate-500" />
+                    <Loader2 className="size-5 animate-spin text-theme-text-muted" />
                   </div>
                 ) : customFields.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-8">
+                  <p className="text-sm text-theme-text-muted text-center py-8">
                     No custom fields defined. Create them in Settings.
                   </p>
                 ) : (
                   <div className="space-y-3">
                     {customFields.map((field) => (
                       <div key={field.id} className="space-y-1.5">
-                        <Label className="text-slate-400 text-xs capitalize">
+                        <Label className="text-theme-text-secondary text-xs capitalize">
                           {field.field_name}
                         </Label>
                         <Input
@@ -570,7 +572,7 @@ export function ContactDetailView({
                             }))
                           }
                           placeholder={`Enter ${field.field_name}...`}
-                          className="bg-slate-800 border-slate-700 text-white h-8 text-sm placeholder:text-slate-500"
+                          className="bg-theme-bg-secondary border-theme-border text-theme-text h-8 text-sm placeholder:text-theme-text-muted/50"
                         />
                       </div>
                     ))}
@@ -598,16 +600,16 @@ export function ContactDetailView({
                     <Loader2 className="size-5 animate-spin text-violet-500" />
                   </div>
                 ) : deals.length === 0 ? (
-                  <p className="text-xs text-slate-500">No deals yet</p>
+                  <p className="text-xs text-theme-text-muted">No deals yet</p>
                 ) : (
                   <div className="space-y-2">
                     {deals.map((deal) => (
                       <div
                         key={deal.id}
-                        className="rounded-lg border border-slate-700 bg-slate-800/50 p-3"
+                        className="rounded-lg border border-theme-border bg-theme-bg-secondary/50 p-3"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-white">
+                          <p className="text-sm font-medium text-theme-text">
                             {deal.title}
                           </p>
                           {deal.stage && (
@@ -622,7 +624,7 @@ export function ContactDetailView({
                             </span>
                           )}
                         </div>
-                        <div className="mt-1.5 flex items-center justify-between text-xs text-slate-400">
+                        <div className="mt-1.5 flex items-center justify-between text-xs text-theme-text-secondary">
                           <span className="flex items-center gap-1">
                             <DollarSign className="size-3" />
                             {new Intl.NumberFormat('en-US', {
@@ -649,6 +651,63 @@ export function ContactDetailView({
                 )}
               </TabsContent>
             </Tabs>
+
+            {/* Audit Trail Footer */}
+            {(contact.creator || contact.updater) && (
+              <div className="border-t border-theme-border/50 px-4 py-3 space-y-2.5 bg-theme-bg-secondary/20">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-theme-text-muted">
+                  Activity Log
+                </p>
+                {contact.creator && (
+                  <div className="flex items-start gap-2">
+                    <UserCircle className="size-4 text-violet-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-theme-text-secondary">
+                        <span className="text-theme-text font-medium">
+                          Created by
+                        </span>{' '}
+                        {contact.creator.full_name || contact.creator.email}
+                      </p>
+                      <p className="text-[10px] text-theme-text-muted flex items-center gap-1 mt-0.5">
+                        <Clock className="size-2.5" />
+                        {new Date(contact.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {contact.updater && contact.updated_by && (
+                  <div className="flex items-start gap-2">
+                    <UserCircle className="size-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-theme-text-secondary">
+                        <span className="text-theme-text font-medium">
+                          Last updated by
+                        </span>{' '}
+                        {contact.updater.full_name || contact.updater.email}
+                      </p>
+                      {contact.updated_at && (
+                        <p className="text-[10px] text-theme-text-muted flex items-center gap-1 mt-0.5">
+                          <Clock className="size-2.5" />
+                          {new Date(contact.updated_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </SheetContent>

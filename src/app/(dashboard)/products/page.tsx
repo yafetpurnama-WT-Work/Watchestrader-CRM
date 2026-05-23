@@ -11,6 +11,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { products as productsApi } from "@/lib/api";
+import { TablePagination } from "@/components/ui/table-pagination";
 import type { Product } from "@/types";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -34,11 +35,12 @@ export default function ProductsPage() {
   const [filterCondition, setFilterCondition] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: String(page), per_page: "24" };
+      const params: Record<string, string> = { page: String(page), per_page: String(perPage) };
       if (search) params.search = search;
       if (filterBrand) params.brand = filterBrand;
       if (filterCondition) params.condition = filterCondition;
@@ -49,7 +51,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, filterBrand, filterCondition]);
+  }, [page, search, filterBrand, filterCondition, perPage]);
 
   useEffect(() => {
     fetchProducts();
@@ -339,29 +341,14 @@ export default function ProductsPage() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-theme-text-muted">
-            Page {data?.current_page || 1} of {totalPages} · {data?.total || 0} total
-          </p>
-          <div className="flex gap-1">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover"
-            >
-              Previous
-            </button>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={data?.total || 0}
+        perPage={perPage}
+        onPageChange={setPage}
+        onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+      />
     </div>
   );
 }

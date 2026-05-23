@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════════
+    Resizable Table Columns — Modern CSS
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Table wrapper — horizontal scroll with elegant scrollbar ─── */
+.rt-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-lg, 0.625rem);
+  border: 1px solid var(--theme-border);
+}
+
+.rt-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.rt-wrapper::-webkit-scrollbar-track {
+  background: var(--theme-bg-secondary);
+  border-radius: 4px;
+}
+
+.rt-wrapper::-webkit-scrollbar-thumb {
+  background: var(--theme-text-muted);
+  border-radius: 4px;
+  opacity: 0.4;
+}
+
+.rt-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-text-secondary);
+}
+
+/* Firefox scrollbar */
+.rt-wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-text-muted) var(--theme-bg-secondary);
+}
+
+/* ─── The table itself ─── */
+.rt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rt-table.rt-fixed {
+  table-layout: fixed;
+}
+
+/* ─── Header cells — relative for handle positioning ─── */
+.rt-table thead th {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ─── Modern Table Header — visually distinct from data rows ─── */
+.rt-table thead {
+  border-bottom: 2px solid var(--theme-border);
+}
+
+.rt-table thead tr {
+  background: var(--theme-bg-secondary);
+}
+
+.rt-table thead th {
+  padding: 0.625rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--theme-text-muted);
+  white-space: nowrap;
+}
+
+/* ─── Sortable header — clickable styling ─── */
+.rt-sortable {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.rt-sortable:hover {
+  color: var(--theme-text);
+}
+
+.rt-sortable:hover .rt-sort-icon {
+  opacity: 1;
+}
+
+/* ─── Sort icon ─── */
+.rt-sort-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  opacity: 0.35;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.rt-sort-icon.rt-sort-active {
+  opacity: 1;
+  color: var(--color-primary, #7c3aed);
+}
+
+/* ─── Data rows — subtle alternation + hover ─── */
+.rt-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.rt-table tbody tr:hover {
+  background-color: var(--theme-bg-hover, rgba(0, 0, 0, 0.03));
+}
+
+/* ─── Resize handle — the draggable area ─── */
+.rt-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+/* Grip dots — visible indicator */
+.rt-handle-grip {
+  display: block;
+  width: 3px;
+  height: 16px;
+  border-radius: 1.5px;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+/* Hover — show the grip */
+.rt-handle:hover .rt-handle-grip {
+  background-color: var(--color-primary, #7c3aed);
+}
+
+.rt-handle:hover {
+  background-color: color-mix(in srgb, var(--color-primary, #7c3aed) 12%, transparent);
+}
+
+/* Active — brighter during drag */
+.rt-handle:active .rt-handle-grip,
+body.col-resizing .rt-handle-grip {
+  background-color: var(--color-primary, #7c3aed);
+}
+
+/* ─── Body cursor override during drag ─── */
+body.col-resizing,
+body.col-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* ─── Truncated cell content ─── */
+.rt-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inner content also truncates */
+.rt-cell > span,
+.rt-cell > p,
+.rt-cell > a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}

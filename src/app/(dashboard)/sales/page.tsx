@@ -7,6 +7,7 @@ import {
   Loader2, AlertCircle, CheckCircle, ChevronDown, Check,
 } from "lucide-react";
 import { users as usersApi, roles as rolesApi, companies as companiesApi, outlets as outletsApi } from "@/lib/api";
+import { TablePagination } from "@/components/ui/table-pagination";
 import type { Role, Company, Outlet } from "@/types";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -43,6 +44,7 @@ export default function SalesTeamPage() {
   const [filterRole, setFilterRole] = useState("");
   const [filterCompany, setFilterCompany] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -64,14 +66,14 @@ export default function SalesTeamPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: String(page), per_page: "25" };
+      const params: Record<string, string> = { page: String(page), per_page: String(perPage) };
       if (search) params.search = search;
       if (filterRole) params.role_id = filterRole;
       if (filterCompany) params.company_id = filterCompany;
       const res = await usersApi.list(params);
       setData(res.data);
     } catch { /* ignore */ } finally { setLoading(false); }
-  }, [page, search, filterRole, filterCompany]);
+  }, [page, search, filterRole, filterCompany, perPage]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -271,11 +273,13 @@ export default function SalesTeamPage() {
 
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-theme-text flex items-center gap-2">
-            <Users className="h-7 w-7 text-violet-500" /> Sales Team
-          </h1>
-          <p className="mt-1 text-sm text-theme-text-muted">Manage users and sales representatives</p>
+        <div className="flex items-center gap-1 px-2">
+          {/* <Users className="h-[52px] w-[52px] text-violet-500 shrink-0" /> */}
+          <Users size={52} className="text-violet-500 shrink-0" />
+          <div>
+            <h1 className="text-2xl font-bold text-theme-text">Sales Team</h1>
+            <p className="mt-0.5 text-sm text-theme-text-muted">Manage users and sales representatives</p>
+          </div>
         </div>
         {can("users.create") && (
           <button onClick={openCreateModal}
@@ -395,17 +399,14 @@ export default function SalesTeamPage() {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-theme-border px-4 py-3">
-            <p className="text-xs text-theme-text-muted">Page {data?.current_page || 1} of {totalPages}</p>
-            <div className="flex gap-1">
-              <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover">Previous</button>
-              <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover">Next</button>
-            </div>
-          </div>
-        )}
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={data?.total || 0}
+          perPage={perPage}
+          onPageChange={setPage}
+          onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+        />
       </div>
 
       {/* ══════════════════════════════════════════════════════════════

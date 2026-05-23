@@ -69,7 +69,7 @@ class LeadController extends Controller
             $lead = Lead::create(array_merge($validated, [
                 'status' => $validated['status'] ?? 'cold',
                 'created_by' => $request->user()->id,
-                'updated_by' => $request->user()->id,
+                // 'updated_by' => $request->user()->id,
             ]));
 
             LeadHistory::create([
@@ -115,6 +115,7 @@ class LeadController extends Controller
                 'subLeads.product',
                 'history.performer',
                 'creator',
+                'updater',
             ])->findOrFail($id);
 
             return response()->json(['success' => true, 'data' => $lead, 'message' => 'Lead retrieved.']);

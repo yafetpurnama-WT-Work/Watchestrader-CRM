@@ -44,7 +44,6 @@ class OutletController extends Controller
         try {
             $outlet = Outlet::create(array_merge($validated, [
                 'created_by' => $request->user()->id,
-                'updated_by' => $request->user()->id,
             ]));
             return response()->json(['success' => true, 'data' => $outlet->load('company'), 'message' => 'Outlet created.'], 201);
         } catch (\Exception $e) {
@@ -55,7 +54,7 @@ class OutletController extends Controller
     public function show(string $id)
     {
         try {
-            $outlet = Outlet::with('company')->withCount(['users', 'customers'])->findOrFail($id);
+            $outlet = Outlet::with(['company', 'creator', 'updater'])->withCount(['users', 'customers'])->findOrFail($id);
             return response()->json(['success' => true, 'data' => $outlet, 'message' => 'Outlet retrieved.']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'data' => null, 'message' => $e->getMessage()], 404);

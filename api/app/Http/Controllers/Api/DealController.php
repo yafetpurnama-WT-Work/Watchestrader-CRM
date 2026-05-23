@@ -57,7 +57,7 @@ class DealController extends Controller
     public function show(Request $request, string $id)
     {
         $deal = Deal::where('user_id', $request->user()->id)
-            ->with(['contact', 'pipeline', 'stage', 'assignedUser:id,full_name'])
+            ->with(['contact', 'pipeline', 'stage', 'assignedUser:id,full_name', 'creator', 'updater'])
             ->findOrFail($id);
 
         return response()->json(['success' => true, 'data' => $deal, 'message' => 'Deal retrieved.']);

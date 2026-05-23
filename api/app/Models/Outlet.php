@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\Auditable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
 class Outlet extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, Auditable;
 
     protected $fillable = [
         'company_id',

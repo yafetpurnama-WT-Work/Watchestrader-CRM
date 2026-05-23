@@ -77,9 +77,17 @@ export default function OrganizationPage() {
               className="overflow-hidden rounded-2xl border border-theme-border bg-theme-bg-card shadow-sm transition-all"
             >
               {/* Company Row */}
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleExpand(company.id)}
-                className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-theme-bg-hover/50"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleExpand(company.id);
+                  }
+                }}
+                className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-theme-bg-hover/50 cursor-pointer"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/10">
                   <Building2 className="h-6 w-6 text-violet-500" />
@@ -122,7 +130,7 @@ export default function OrganizationPage() {
                     <ChevronRight className="h-5 w-5 text-theme-text-muted" />
                   )}
                 </div>
-              </button>
+              </div>
 
               {/* Outlets */}
               {isExpanded && outlets.length > 0 && (

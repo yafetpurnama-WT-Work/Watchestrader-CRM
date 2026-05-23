@@ -12,7 +12,7 @@ class BroadcastController extends Controller
     {
         $broadcasts = Broadcast::where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate($request->query('per_page', 15));
 
         return response()->json(['success' => true, 'data' => $broadcasts, 'message' => 'Broadcasts retrieved.']);
     }

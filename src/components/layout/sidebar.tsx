@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -29,6 +29,10 @@ import {
   Building2,
   Shield,
   Bell,
+  ChevronRight,
+  ChevronDown,
+  FileText,
+  UserSquare,
 } from "lucide-react";
 import {
   Avatar,
@@ -52,10 +56,16 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "Inbox", icon: MessageSquare },
-  { href: "/customers", label: "Customers", icon: UserCircle },
+  {
+    label: "Customer",
+    icon: UserCircle,
+    children: [
+      { href: "/customers", label: "Contact", icon: UserSquare },
+      { href: "/contacts", label: "Detail", icon: FileText },
+    ],
+  },
   { href: "/leads", label: "Leads", icon: Target },
   { href: "/products", label: "Products", icon: Watch },
-  { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
@@ -63,7 +73,7 @@ const navItems = [
 
 const managementItems = [
   { href: "/sales", label: "Sales Team", icon: Users },
-  { href: "/rbac", label: "Roles & Access", icon: Shield },
+  { href: "/roles-access", label: "Roles & Access", icon: Shield },
   { href: "/organization", label: "Organization", icon: Building2 },
 ];
 
@@ -90,6 +100,10 @@ export function Sidebar({
   const { theme, toggleTheme } = useTheme();
   const totalUnread = useTotalUnread();
 
+  const [customerOpen, setCustomerOpen] = useState(
+    pathname === "/customers" || pathname === "/contacts"
+  );
+
   useEffect(() => {
     onClose?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,11 +124,12 @@ export function Sidebar({
   }, [open, onClose]);
 
   const filteredNavItems = navItems.filter((item) => {
+    if (item.children) {
+      return can("customers.view");
+    }
     switch (item.href) {
-      case "/customers": return can("customers.view");
       case "/leads": return can("leads.view");
       case "/products": return can("products.view");
-      case "/contacts": return can("customers.view");
       default: return true;
     }
   });
@@ -122,7 +137,7 @@ export function Sidebar({
   const filteredManagementItems = managementItems.filter((item) => {
     switch (item.href) {
       case "/sales": return can("users.view");
-      case "/rbac": return can("roles.view");
+      case "/roles-access": return can("roles.view");
       case "/organization": return can("companies.view") || can("outlets.view");
       default: return false;
     }
@@ -199,16 +214,143 @@ export function Sidebar({
           <nav className="flex-1 overflow-y-auto px-2 py-3">
             <ul className="flex flex-col gap-1">
               {filteredNavItems.map((item) => {
+                if (item.children) {
+                  const isActive = pathname === "/customers" || pathname === "/contacts";
+
+                  const groupContent = (
+                    <div className="flex w-full flex-col gap-1">
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setCustomerOpen(!customerOpen)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            setCustomerOpen(!customerOpen);
+                            e.preventDefault();
+                          }
+                        }}
+                        className={cn(
+                          "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer",
+                          collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
+                          isActive && !customerOpen
+                            ? "bg-violet-500/10 text-violet-500"
+                            : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span
+                          className={cn(
+                            "flex-1 text-left transition-opacity duration-200",
+                            collapsed && "lg:hidden",
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                        {!collapsed && (
+                          <div className="shrink-0 transition-transform duration-200">
+                            {customerOpen ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Submenu */}
+                      <div
+                        className={cn(
+                          "flex flex-col gap-1 overflow-hidden transition-all duration-200 ease-in-out",
+                          customerOpen && !collapsed ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
+                          collapsed && "hidden"
+                        )}
+                      >
+                        {item.children.map((child) => {
+                          const isChildActive = pathname === child.href;
+                          const ChildIcon = child.icon;
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-9",
+                                isChildActive
+                                  ? "bg-violet-500/10 text-violet-500"
+                                  : "text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text",
+                              )}
+                            >
+                              {ChildIcon && <ChildIcon className="size-4 shrink-0" />}
+                              {child.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+
+                  return (
+                    <li key={item.label} className="flex justify-center w-full">
+                      {collapsed ? (
+                        <DropdownMenu>
+                          <Tooltip>
+                            <TooltipTrigger render={<div className="hidden lg:flex w-full justify-center" />}>
+                              <DropdownMenuTrigger className="focus:outline-none" render={groupContent} nativeButton={false} />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" sideOffset={8}>
+                              {item.label}
+                            </TooltipContent>
+                          </Tooltip>
+                          <div className="lg:hidden w-full">{groupContent}</div>
+                          <DropdownMenuContent
+                            side="right"
+                            align="start"
+                            sideOffset={8}
+                            className="w-48 bg-theme-bg-card"
+                          >
+                            <div className="px-2 py-1.5 text-sm font-semibold text-theme-text">
+                              {item.label}
+                            </div>
+                            <DropdownMenuSeparator className="bg-theme-border" />
+                            {item.children.map((child) => {
+                              const ChildIcon = child.icon;
+                              return (
+                                <DropdownMenuItem
+                                  key={child.href}
+                                >
+                                  <Link
+                                    href={child.href}
+                                    className={cn(
+                                      "flex w-full items-center gap-2 text-sm cursor-pointer",
+                                      pathname === child.href
+                                        ? "text-violet-500 font-medium"
+                                        : "text-theme-text-secondary hover:text-theme-text"
+                                    )}
+                                  >
+                                    {ChildIcon && <ChildIcon className="size-4 shrink-0" />}
+                                    {child.label}
+                                  </Link>
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        groupContent
+                      )}
+                    </li>
+                  );
+                }
+
                 const isActive =
                   pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  (item.href !== "/dashboard" && pathname?.startsWith(item.href));
 
                 const showUnreadDot =
                   item.href === "/inbox" && totalUnread > 0 && !isActive;
 
                 const linkContent = (
                   <Link
-                    href={item.href}
+                    href={item.href || "#"}
                     className={cn(
                       "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
@@ -242,13 +384,12 @@ export function Sidebar({
                 );
 
                 return (
-                  <li key={item.href} className="flex justify-center w-full">
+                  <li key={item.href || item.label} className="flex justify-center w-full">
                     {collapsed ? (
                       <Tooltip>
-                        <TooltipTrigger
-                          className="hidden lg:flex w-full justify-center"
-                          render={linkContent}
-                        />
+                        <div className="hidden lg:flex w-full justify-center">
+                          <TooltipTrigger render={linkContent} />
+                        </div>
                         <TooltipContent side="right" sideOffset={8}>
                           {item.label}
                         </TooltipContent>
@@ -309,10 +450,9 @@ export function Sidebar({
                       <li key={item.href} className="flex justify-center w-full">
                         {collapsed ? (
                           <Tooltip>
-                            <TooltipTrigger
-                              className="hidden lg:flex w-full justify-center"
-                              render={linkContent}
-                            />
+                            <div className="hidden lg:flex w-full justify-center">
+                              <TooltipTrigger render={linkContent} />
+                            </div>
                             <TooltipContent side="right" sideOffset={8}>
                               {item.label}
                             </TooltipContent>
@@ -360,10 +500,9 @@ export function Sidebar({
                   <li key={item.href} className="flex justify-center w-full">
                     {collapsed ? (
                       <Tooltip>
-                        <TooltipTrigger
-                          className="hidden lg:flex w-full justify-center"
-                          render={linkContent}
-                        />
+                        <div className="hidden lg:flex w-full justify-center">
+                          <TooltipTrigger render={linkContent} />
+                        </div>
                         <TooltipContent side="right" sideOffset={8}>
                           {item.label}
                         </TooltipContent>

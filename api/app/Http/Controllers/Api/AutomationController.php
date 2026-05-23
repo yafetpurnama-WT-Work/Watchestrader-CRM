@@ -13,7 +13,7 @@ class AutomationController extends Controller
         $automations = Automation::where('user_id', $request->user()->id)
             ->withCount('steps')
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate($request->query('per_page', 15));
 
         return response()->json(['success' => true, 'data' => $automations, 'message' => 'Automations retrieved.']);
     }

@@ -5,7 +5,9 @@ import {
   UserCircle, Plus, Search, Phone, Mail, MapPin,
   Edit2, Trash2, Eye, X, Loader2, AlertCircle, CheckCircle,
   UserCheck, UserX, Building2, ChevronDown, Check,
+  ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
+import { useResizableColumns } from '@/hooks/use-resizable-columns';
 import {
   customers as customersApi,
   customerStatuses as statusesApi,
@@ -17,6 +19,7 @@ import {
 import type { Customer, CustomerStatus, Outlet, Company } from "@/types";
 import { usePermissions } from "@/hooks/use-permissions";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { TablePagination } from "@/components/ui/table-pagination";
 
 interface CustomerForm {
   name: string;
@@ -85,6 +88,8 @@ const formatPhoneForDisplay = (phone: string) => {
   return `+62 ${clean}`;
 };
 
+const CUSTOMER_COLUMN_COUNT = 7;
+
 export default function CustomersPage() {
   const { can } = usePermissions();
   const [data, setData] = useState<any>(null);
@@ -97,6 +102,25 @@ export default function CustomersPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterOutlet, setFilterOutlet] = useState("");
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
+  // Sort
+  const [sortField, setSortField] = useState('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Resizable columns
+  const {
+    initialized: colsReady,
+    isResizing,
+    tableRef,
+    getThStyle,
+    getTdStyle,
+    renderHandle,
+  } = useResizableColumns({
+    columnCount: CUSTOMER_COLUMN_COUNT,
+    minWidth: 60,
+    storageKey: 'customers-table',
+  });
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -113,14 +137,42 @@ export default function CustomersPage() {
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: String(page), per_page: "25" };
+      const params: Record<string, string> = { page: String(page), per_page: String(perPage) };
       if (search) params.search = search;
       if (filterStatus) params.status_id = filterStatus;
       if (filterOutlet) params.outlet_id = filterOutlet;
+      if (sortField) {
+        params.sort = sortField;
+        params.direction = sortDirection;
+      }
       const res = await customersApi.list(params);
       setData(res.data);
     } catch { /* ignore */ } finally { setLoading(false); }
-  }, [page, search, filterStatus, filterOutlet]);
+  }, [page, search, filterStatus, filterOutlet, sortField, sortDirection, perPage]);
+
+  function handleSort(field: string) {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortField('');
+        setSortDirection('asc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setPage(1);
+  }
+
+  function renderSortIcon(field: string) {
+    if (sortField === field) {
+      return sortDirection === 'asc'
+        ? <ArrowUp className="h-3.5 w-3.5 rt-sort-icon rt-sort-active" />
+        : <ArrowDown className="h-3.5 w-3.5 rt-sort-icon rt-sort-active" />;
+    }
+    return <ArrowUpDown className="h-3.5 w-3.5 rt-sort-icon" />;
+  }
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
@@ -374,11 +426,12 @@ export default function CustomersPage() {
 
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-theme-text flex items-center gap-2">
-            <UserCircle className="h-7 w-7 text-violet-500" /> Customers
-          </h1>
-          <p className="mt-1 text-sm text-theme-text-muted">Manage your customer database</p>
+        <div className="flex items-center gap-1 px-2">
+          <UserCircle size={52} className="text-violet-500 shrink-0" />
+          <div>
+            <h1 className="text-2xl font-bold text-theme-text">Customers Contact</h1>
+            <p className="mt-0.5 text-sm text-theme-text-muted">Manage your customer database</p>
+          </div>
         </div>
         {can("customers.create") && (
           <button onClick={openCreateModal}
@@ -410,18 +463,37 @@ export default function CustomersPage() {
       </div>
 
       {/* ── Table ── */}
-      <div className="overflow-hidden rounded-2xl border border-theme-border bg-theme-bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+      <div className="rt-wrapper">
+          <table ref={tableRef} className={`rt-table w-full text-sm${colsReady ? ' rt-fixed' : ''}`}>
             <thead>
-              <tr className="border-b border-theme-border bg-theme-bg-secondary/50">
-                <th className="px-4 py-3 text-left font-semibold text-theme-text-muted">Customer</th>
-                <th className="px-4 py-3 text-left font-semibold text-theme-text-muted">Contact</th>
-                <th className="px-4 py-3 text-left font-semibold text-theme-text-muted">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-theme-text-muted">Outlet</th>
-                <th className="px-4 py-3 text-left font-semibold text-theme-text-muted">Assigned Sales</th>
-                <th className="px-4 py-3 text-left font-semibold text-theme-text-muted">Source</th>
-                <th className="px-4 py-3 text-right font-semibold text-theme-text-muted">Actions</th>
+              <tr>
+                <th className="text-left rt-sortable" style={getThStyle(0)} onClick={() => handleSort('name')}>
+                  <span className="flex items-center gap-1">Customer {renderSortIcon('name')}</span>
+                  {renderHandle(0)}
+                </th>
+                <th className="text-left rt-sortable" style={getThStyle(1)} onClick={() => handleSort('phone')}>
+                  <span className="flex items-center gap-1">Contact {renderSortIcon('phone')}</span>
+                  {renderHandle(1)}
+                </th>
+                <th className="text-left rt-sortable" style={getThStyle(2)} onClick={() => handleSort('status')}>
+                  <span className="flex items-center gap-1">Status {renderSortIcon('status')}</span>
+                  {renderHandle(2)}
+                </th>
+                <th className="text-left rt-sortable" style={getThStyle(3)} onClick={() => handleSort('outlet')}>
+                  <span className="flex items-center gap-1">Outlet {renderSortIcon('outlet')}</span>
+                  {renderHandle(3)}
+                </th>
+                <th className="text-left rt-sortable" style={getThStyle(4)} onClick={() => handleSort('assigned_sales')}>
+                  <span className="flex items-center gap-1">Assigned Sales {renderSortIcon('assigned_sales')}</span>
+                  {renderHandle(4)}
+                </th>
+                <th className="text-left rt-sortable" style={getThStyle(5)} onClick={() => handleSort('source')}>
+                  <span className="flex items-center gap-1">Source {renderSortIcon('source')}</span>
+                  {renderHandle(5)}
+                </th>
+                <th className="text-right" style={getThStyle(6)}>
+                  <span>Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-theme-border">
@@ -443,34 +515,34 @@ export default function CustomersPage() {
               ) : (
                 customerList.map((c) => (
                   <tr key={c.id} className="transition-colors hover:bg-theme-bg-hover/50">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 rt-cell" style={getTdStyle(0)}>
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-sm font-semibold text-violet-500">
                           {c.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
-                        <div>
-                          <p className="font-medium text-theme-text">{c.name}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-theme-text truncate">{c.name}</p>
                           {c.address && (
-                            <p className="mt-0.5 flex items-center gap-1 text-xs text-theme-text-muted">
-                              <MapPin className="h-3 w-3" /> {c.address}
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-theme-text-muted truncate">
+                              <MapPin className="h-3 w-3 shrink-0" /> {c.address}
                             </p>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 rt-cell" style={getTdStyle(1)}>
                       <div className="space-y-0.5">
                         <p className="flex items-center gap-1 text-theme-text">
-                          <Phone className="h-3 w-3 text-theme-text-muted" /> {formatPhoneForDisplay(c.phone)}
+                          <Phone className="h-3 w-3 text-theme-text-muted shrink-0" /> {formatPhoneForDisplay(c.phone)}
                         </p>
                         {c.email && (
                           <p className="flex items-center gap-1 text-xs text-theme-text-muted">
-                            <Mail className="h-3 w-3" /> {c.email}
+                            <Mail className="h-3 w-3 shrink-0" /> {c.email}
                           </p>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 rt-cell" style={getTdStyle(2)}>
                       {c.status ? (
                         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                           style={{ backgroundColor: `${c.status.color}15`, color: c.status.color }}>
@@ -480,18 +552,18 @@ export default function CustomersPage() {
                         <span className="text-xs text-theme-text-muted">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-theme-text-secondary">
+                    <td className="px-4 py-3 text-theme-text-secondary rt-cell" style={getTdStyle(3)}>
                       {c.outlet?.name || "—"}
                     </td>
-                    <td className="px-4 py-3 text-theme-text-secondary">
+                    <td className="px-4 py-3 text-theme-text-secondary rt-cell" style={getTdStyle(4)}>
                       {c.assigned_sales?.full_name || "—"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 rt-cell" style={getTdStyle(5)}>
                       <span className="text-xs text-theme-text-muted capitalize">
                         {c.source || "—"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right" style={getTdStyle(6)}>
                       <div className="flex items-center justify-end gap-1">
                         {can("customers.update") && (
                           <button onClick={() => openEditModal(c)}
@@ -512,27 +584,17 @@ export default function CustomersPage() {
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-theme-border px-4 py-3">
-            <p className="text-xs text-theme-text-muted">
-              Page {data?.current_page || 1} of {totalPages} · {data?.total || 0} total
-            </p>
-            <div className="flex gap-1">
-              <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover">
-                Previous
-              </button>
-              <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-theme-border px-3 py-1.5 text-xs font-medium text-theme-text disabled:opacity-50 hover:bg-theme-bg-hover">
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Pagination */}
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        totalItems={data?.total || 0}
+        perPage={perPage}
+        onPageChange={setPage}
+        onPerPageChange={(v) => { setPerPage(v); setPage(1); }}
+      />
 
       {/* ══════════════════════════════════════════════════════════════
           CREATE / EDIT CUSTOMER MODAL

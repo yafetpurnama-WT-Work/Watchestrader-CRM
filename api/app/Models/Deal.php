@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\Auditable;
 
 class Deal extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, Auditable;
 
     protected $fillable = [
         'user_id', 'pipeline_id', 'stage_id', 'contact_id', 'conversation_id',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Contact;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ContactController extends Controller
 {
@@ -16,8 +17,8 @@ class ContactController extends Controller
             if ($search = $request->query('search')) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
                 });
             }
 
@@ -25,7 +26,7 @@ class ContactController extends Controller
                 $query->whereHas('tags', fn($q) => $q->where('tags.id', $tagId));
             }
 
-            $contacts = $query->orderBy('created_at', 'desc')->paginate(15);
+            $contacts = $query->orderBy('created_at', 'desc')->paginate($request->query('per_page', 15));
 
             return response()->json(['success' => true, 'data' => $contacts, 'message' => 'Contacts retrieved.']);
         } catch (\Exception $e) {
@@ -51,7 +52,10 @@ class ContactController extends Controller
             ));
 
             if (!empty($validated['tag_ids'])) {
-                $contact->tags()->sync($validated['tag_ids']);
+                $syncData = collect($validated['tag_ids'])->mapWithKeys(function ($id) {
+                    return [$id => ['id' => Str::uuid()->toString()]];
+                })->toArray();
+                $contact->tags()->sync($syncData);
             }
 
             return response()->json([
@@ -68,7 +72,7 @@ class ContactController extends Controller
     {
         try {
             $contact = Contact::where('user_id', $request->user()->id)
-                ->with(['tags', 'notes', 'customValues.customField', 'conversations'])
+                ->with(['tags', 'notes', 'customValues.customField', 'conversations', 'creator', 'updater'])
                 ->findOrFail($id);
 
             return response()->json(['success' => true, 'data' => $contact, 'message' => 'Contact retrieved.']);
@@ -93,7 +97,10 @@ class ContactController extends Controller
             $contact->update(collect($validated)->except('tag_ids')->toArray());
 
             if (isset($validated['tag_ids'])) {
-                $contact->tags()->sync($validated['tag_ids']);
+                $syncData = collect($validated['tag_ids'])->mapWithKeys(function ($id) {
+                    return [$id => ['id' => Str::uuid()->toString()]];
+                })->toArray();
+                $contact->tags()->sync($syncData);
             }
 
             return response()->json([
@@ -132,7 +139,10 @@ class ContactController extends Controller
 
         try {
             $contact = Contact::where('user_id', $request->user()->id)->findOrFail($id);
-            $contact->tags()->sync($validated['tag_ids']);
+            $syncData = collect($validated['tag_ids'])->mapWithKeys(function ($id) {
+                return [$id => ['id' => Str::uuid()->toString()]];
+            })->toArray();
+            $contact->tags()->sync($syncData);
             return response()->json(['success' => true, 'data' => $contact->tags()->get(), 'message' => 'Tags synced.']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'data' => null, 'message' => $e->getMessage()], 500);

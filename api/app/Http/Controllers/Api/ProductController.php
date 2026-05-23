@@ -75,7 +75,6 @@ class ProductController extends Controller
         try {
             $product = Product::create(array_merge($validated, [
                 'created_by' => $request->user()->id,
-                'updated_by' => $request->user()->id,
             ]));
 
             return response()->json([
@@ -91,7 +90,7 @@ class ProductController extends Controller
     public function show(string $id)
     {
         try {
-            $product = Product::with('outlet')->findOrFail($id);
+            $product = Product::with(['outlet', 'creator', 'updater'])->findOrFail($id);
             return response()->json(['success' => true, 'data' => $product, 'message' => 'Product retrieved.']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'data' => null, 'message' => $e->getMessage()], 404);

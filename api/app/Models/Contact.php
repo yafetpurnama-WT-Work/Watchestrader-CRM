@@ -5,12 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Traits\Auditable;
 
 class Contact extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, Auditable;
 
-    protected $fillable = ['user_id', 'phone', 'name', 'email', 'company', 'avatar_url'];
+    protected $fillable = ['user_id', 'phone', 'name', 'email', 'company', 'avatar_url', 'customer_id'];
 
     public function user()
     {
@@ -35,5 +36,10 @@ class Contact extends Model
     public function conversations()
     {
         return $this->hasMany(Conversation::class);
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
     }
 }
