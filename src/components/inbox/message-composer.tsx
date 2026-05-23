@@ -77,7 +77,7 @@ export function MessageComposer({
   );
 
   return (
-    <div className="border-t border-slate-800 bg-slate-900 p-3">
+    <div className="border-t border-theme-border bg-theme-bg-secondary p-3 transition-colors duration-200">
       {replyTo && (
         <div className="mb-2">
           <ReplyQuote
@@ -108,7 +108,7 @@ export function MessageComposer({
         <Button
           variant="ghost"
           size="sm"
-          className="h-9 w-9 shrink-0 p-0 text-slate-400 hover:text-white"
+          className="h-9 w-9 shrink-0 p-0 text-theme-text-secondary hover:text-theme-text hover:bg-theme-bg-hover"
           onClick={onOpenTemplates}
           title="Send template"
         >
@@ -128,7 +128,7 @@ export function MessageComposer({
           disabled={sessionExpired}
           rows={1}
           className={cn(
-            "flex-1 resize-none rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-colors focus:border-violet-500/50",
+            "flex-1 resize-none rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text placeholder-theme-text-muted outline-none transition-colors focus:border-violet-500/50",
             sessionExpired && "cursor-not-allowed opacity-50"
           )}
         />
@@ -146,7 +146,7 @@ export function MessageComposer({
       {/* Hint sits outside the flex row so its height doesn't push
           `items-end` buttons below the textarea. Indented to line up
           under the textarea left edge (w-9 button + gap-2 = 44px). */}
-      <p className="mt-1 pl-11 text-[10px] text-slate-600">
+      <p className="mt-1 pl-11 text-[10px] text-theme-text-muted">
         Type &apos;/&apos; for quick replies
       </p>
     </div>
