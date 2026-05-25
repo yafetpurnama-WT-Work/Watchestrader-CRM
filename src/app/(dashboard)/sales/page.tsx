@@ -59,9 +59,10 @@ export default function SalesTeamPage() {
   const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
   const companyDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const isProcessing = deleting || submitting;
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -283,7 +284,8 @@ export default function SalesTeamPage() {
         </div>
         {can("users.create") && (
           <button onClick={openCreateModal}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-md hover:bg-violet-700 transition-colors">
+            disabled={isProcessing}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-md hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             <Plus className="h-4 w-4" /> Add User
           </button>
         )}
@@ -381,13 +383,15 @@ export default function SalesTeamPage() {
                       <div className="flex items-center justify-end gap-1">
                         {can("users.update") && (
                           <button onClick={() => openEditModal(u)}
-                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text" title="Edit user">
+                            disabled={isProcessing}
+                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50 disabled:cursor-not-allowed" title="Edit user">
                             <Edit2 className="h-4 w-4" />
                           </button>
                         )}
                         {can("users.delete") && (
                           <button onClick={() => setDeleteTarget(u)}
-                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500" title="Delete user">
+                            disabled={isProcessing}
+                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete user">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}

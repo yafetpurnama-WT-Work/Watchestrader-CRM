@@ -125,6 +125,7 @@ export default function CustomersPage() {
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
   const [form, setForm] = useState<CustomerForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -133,6 +134,8 @@ export default function CustomersPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const isProcessing = !!loadingEditId || deleting || submitting;
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -269,56 +272,61 @@ export default function CustomersPage() {
   };
 
   const openEditModal = async (customer: any) => {
-    setEditingCustomer(customer);
+    setLoadingEditId(customer.id);
+    try {
+      setEditingCustomer(customer);
 
-    // Format phone number to strip leading 0 or +62/62 for input
-    let phoneVal = customer.phone || "";
-    if (phoneVal.startsWith("+62")) {
-      phoneVal = phoneVal.substring(3);
-    } else if (phoneVal.startsWith("62")) {
-      phoneVal = phoneVal.substring(2);
-    } else if (phoneVal.startsWith("0")) {
-      phoneVal = phoneVal.substring(1);
-    }
-    phoneVal = phoneVal.replace(/\D/g, "");
+      // Format phone number to strip leading 0 or +62/62 for input
+      let phoneVal = customer.phone || "";
+      if (phoneVal.startsWith("+62")) {
+        phoneVal = phoneVal.substring(3);
+      } else if (phoneVal.startsWith("62")) {
+        phoneVal = phoneVal.substring(2);
+      } else if (phoneVal.startsWith("0")) {
+        phoneVal = phoneVal.substring(1);
+      }
+      phoneVal = phoneVal.replace(/\D/g, "");
 
-    setForm({
-      name: customer.name || "",
-      phone: phoneVal,
-      email: customer.email || "",
-      address: customer.address || "",
-      province_code: customer.province_code || "",
-      city_code: customer.city_code || "",
-      district_code: customer.district_code || "",
-      village_code: customer.village_code || "",
-      rt: customer.rt || "",
-      rw: customer.rw || "",
-      postal_code: customer.postal_code || "",
-      company_id: customer.company_id || "",
-      outlet_id: customer.outlet_id || "",
-      assigned_sales_id: customer.assigned_sales_id || "",
-      status_id: customer.status_id || "",
-      source: customer.source || "",
-    });
+      setForm({
+        name: customer.name || "",
+        phone: phoneVal,
+        email: customer.email || "",
+        address: customer.address || "",
+        province_code: customer.province_code || "",
+        city_code: customer.city_code || "",
+        district_code: customer.district_code || "",
+        village_code: customer.village_code || "",
+        rt: customer.rt || "",
+        rw: customer.rw || "",
+        postal_code: customer.postal_code || "",
+        company_id: customer.company_id || "",
+        outlet_id: customer.outlet_id || "",
+        assigned_sales_id: customer.assigned_sales_id || "",
+        status_id: customer.status_id || "",
+        source: customer.source || "",
+      });
 
-    // Pre-load cascading data for edit
-    if (customer.province_code) {
-      try {
-        const cityRes = await regionApi.cities(customer.province_code);
-        setCities(cityRes.data || []);
-        if (customer.city_code) {
-          const distRes = await regionApi.districts(customer.city_code);
-          setDistricts(distRes.data || []);
-          if (customer.district_code) {
-            const vilRes = await regionApi.villages(customer.district_code);
-            setVillages(vilRes.data || []);
+      // Pre-load cascading data for edit
+      if (customer.province_code) {
+        try {
+          const cityRes = await regionApi.cities(customer.province_code);
+          setCities(cityRes.data || []);
+          if (customer.city_code) {
+            const distRes = await regionApi.districts(customer.city_code);
+            setDistricts(distRes.data || []);
+            if (customer.district_code) {
+              const vilRes = await regionApi.villages(customer.district_code);
+              setVillages(vilRes.data || []);
+            }
           }
-        }
-      } catch { /* ignore */ }
-    }
+        } catch { /* ignore */ }
+      }
 
-    setErrors({});
-    setShowModal(true);
+      setErrors({});
+      setShowModal(true);
+    } finally {
+      setLoadingEditId(null);
+    }
   };
 
   const closeModal = () => {
@@ -435,7 +443,8 @@ export default function CustomersPage() {
         </div>
         {can("customers.create") && (
           <button onClick={openCreateModal}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-md hover:bg-violet-700 transition-colors">
+            disabled={isProcessing}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-md hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             <Plus className="h-4 w-4" /> Add Customer
           </button>
         )}
@@ -567,13 +576,19 @@ export default function CustomersPage() {
                       <div className="flex items-center justify-end gap-1">
                         {can("customers.update") && (
                           <button onClick={() => openEditModal(c)}
-                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text" title="Edit customer">
-                            <Edit2 className="h-4 w-4" />
+                            disabled={isProcessing}
+                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50 disabled:cursor-not-allowed" title="Edit customer">
+                            {loadingEditId === c.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+                            ) : (
+                              <Edit2 className="h-4 w-4" />
+                            )}
                           </button>
                         )}
                         {can("customers.delete") && (
                           <button onClick={() => setDeleteTarget(c)}
-                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500" title="Delete customer">
+                            disabled={isProcessing}
+                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete customer">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
