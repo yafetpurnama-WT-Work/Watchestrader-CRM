@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -24,6 +24,7 @@ import {
   Loader2,
   ArrowDown,
   ArrowUp,
+  Minus,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -42,6 +43,7 @@ import type {
   KeywordMatchTriggerConfig,
 } from "@/types"
 import { cn } from "@/lib/utils"
+import { automations as automationsApi, ApiError } from "@/lib/api"
 
 // ------------------------------------------------------------
 // Types (builder-local — mirror the flattened rows we POST)
@@ -166,6 +168,50 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
+  // Canvas zoom & pan state
+  const [scale, setScale] = useState(1)
+  const [isPanning, setIsPanning] = useState(false)
+  const canvasRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const delta = e.deltaY > 0 ? -0.1 : 0.1
+        setScale((prev) => {
+          const newScale = Math.max(0.2, Math.min(prev + delta, 3))
+          return Number(newScale.toFixed(2))
+        })
+      }
+    }
+
+    // Use native event listener with passive: false to allow preventDefault
+    canvas.addEventListener("wheel", handleWheel, { passive: false })
+    return () => canvas.removeEventListener("wheel", handleWheel)
+  }, [])
+
+  // --- Canvas Panning Handlers ---
+  const handlePanStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.button !== 1) return // only left or middle click
+    const target = e.target as HTMLElement
+    // Ignore if clicking on interactive elements
+    if (target.closest('button, input, select, textarea, a, [role="button"]')) return
+    setIsPanning(true)
+  }
+
+  const handlePanMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isPanning || !canvasRef.current) return
+    canvasRef.current.scrollLeft -= e.movementX
+    canvasRef.current.scrollTop -= e.movementY
+  }
+
+  const handlePanEnd = () => {
+    setIsPanning(false)
+  }
+
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
     setState((s) => ({ ...s, [key]: value }))
   }
@@ -198,46 +244,64 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   async function save() {
     setSaving(true)
     try {
+      const stepsPayload = toApiSteps(state.steps)
       const payload = {
         name: state.name || "Untitled automation",
         description: state.description || null,
         trigger_type: state.trigger_type,
         trigger_config: state.trigger_config,
         is_active: state.is_active,
-        steps: toApiSteps(state.steps),
+        steps: stepsPayload,
       }
 
-      const res = isEditing
-        ? await fetch(`/api/automations/${initial.id}`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          })
-        : await fetch(`/api/automations`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
-          })
+      console.log("[AutomationBuilder] Saving payload:", JSON.stringify(payload, null, 2))
 
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        // If the server blocked activation with validation issues,
-        // surface the first concrete problem so the user can fix it
-        // without opening DevTools for the full array.
-        const firstIssue: { path?: string; message?: string } | undefined =
-          body?.issues?.[0]
-        if (firstIssue?.message) {
-          toast.error(firstIssue.message, {
-            description: firstIssue.path ? `at ${firstIssue.path}` : undefined,
-          })
-        } else {
-          toast.error(body?.error ?? "Save failed")
+      let automationId = initial.id
+
+      if (isEditing) {
+        const updateRes = await automationsApi.update(initial.id!, payload)
+        console.log("[AutomationBuilder] Update response:", JSON.stringify(updateRes, null, 2))
+      } else {
+        const createRes = await automationsApi.create(payload)
+        console.log("[AutomationBuilder] Create response:", JSON.stringify(createRes, null, 2))
+        automationId = createRes.data?.id || createRes.data?.automation?.id
+      }
+
+      if (automationId && stepsPayload.length > 0) {
+        try {
+          const stepsRes = await automationsApi.saveSteps(automationId, stepsPayload)
+          console.log("[AutomationBuilder] saveSteps response:", JSON.stringify(stepsRes, null, 2))
+        } catch (stepsErr) {
+          // Non-fatal — steps may already be saved via the main payload
+          console.warn("[AutomationBuilder] saveSteps endpoint failed (non-fatal):", stepsErr)
         }
-        return
       }
+
       toast.success(isEditing ? "Automation saved" : "Automation created")
-      if (!isEditing && body?.automation?.id) {
-        router.replace(`/automations/${body.automation.id}/edit`)
+
+      if (!isEditing && automationId) {
+        router.replace(`/automations/${automationId}/edit`)
+      } else if (!isEditing) {
+        router.push("/automations")
+      }
+    } catch (err) {
+      console.error("[AutomationBuilder] Save failed:", err)
+      if (err instanceof ApiError) {
+        // Check for validation issues from Laravel
+        const issues = err.data?.issues || err.data?.errors
+        if (issues) {
+          const firstKey = Object.keys(issues)[0]
+          const firstMsg = Array.isArray(issues[firstKey]) ? issues[firstKey][0] : issues[firstKey]
+          if (firstMsg) {
+            toast.error(String(firstMsg), {
+              description: firstKey ? `at ${firstKey}` : undefined,
+            })
+            return
+          }
+        }
+        toast.error(err.message || "Save failed")
+      } else {
+        toast.error("Save failed")
       }
     } finally {
       setSaving(false)
@@ -283,9 +347,49 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
       </header>
 
       {/* Canvas */}
-      <div className="relative flex-1 overflow-y-auto">
+      <div
+        ref={canvasRef}
+        className={cn(
+          "relative flex-1 overflow-auto",
+          isPanning ? "cursor-grabbing select-none" : "cursor-grab"
+        )}
+        onMouseDown={handlePanStart}
+        onMouseMove={handlePanMove}
+        onMouseUp={handlePanEnd}
+        onMouseLeave={handlePanEnd}
+      >
         <div className="absolute inset-0 bg-[radial-gradient(circle,#1e293b_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10">
+
+        {/* Zoom Controls */}
+        <div className="fixed top-[68px] right-6 z-50 flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/90 px-2 py-1 text-xs font-medium text-slate-300 shadow-lg backdrop-blur-sm">
+          <span className="w-10 text-center">{Math.round(scale * 100)}%</span>
+          <button
+            onClick={() => setScale(s => Number(Math.max(0.2, s - 0.1).toFixed(2)))}
+            className="rounded p-1 hover:bg-slate-800 hover:text-white"
+            aria-label="Zoom out"
+          >
+            <Minus className="h-3 w-3" />
+          </button>
+          <button
+            onClick={() => setScale(s => Number(Math.min(3, s + 0.1).toFixed(2)))}
+            className="rounded p-1 hover:bg-slate-800 hover:text-white"
+            aria-label="Zoom in"
+          >
+            <Plus className="h-3 w-3" />
+          </button>
+          <div className="mx-1 h-3 w-px bg-slate-700" />
+          <button
+            onClick={() => setScale(1)}
+            className="rounded px-2 py-1 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div
+          className="relative mx-auto flex max-w-2xl flex-col items-center gap-0 px-4 py-10 transition-transform duration-75 ease-out origin-top"
+          style={{ transform: `scale(${scale})` }}
+        >
           <TriggerCard
             type={state.trigger_type}
             config={state.trigger_config}
@@ -357,9 +461,10 @@ function TriggerCard({
                 value={type}
                 onChange={(e) => onTypeChange(e.target.value as AutomationTriggerType)}
                 className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-white focus:border-violet-500 focus:outline-none"
+                style={{ color: 'white', backgroundColor: '#1e293b' }}
               >
                 {TRIGGER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
+                  <option key={o.value} value={o.value} style={{ color: 'white', backgroundColor: '#1e293b' }}>
                     {o.label}
                   </option>
                 ))}
@@ -377,21 +482,23 @@ function TriggerCard({
             {type === "tag_added" && (
               <Input
                 placeholder="Tag id"
-                value={(config.tag_id as string) ?? ""}
+                value={(config.tag_id as string) || ""}
                 onChange={(e) =>
                   onConfigChange({ ...config, tag_id: e.target.value })
                 }
                 className="bg-slate-800 text-white"
+                style={{ color: 'white', backgroundColor: '#1e293b' }}
               />
             )}
             {type === "time_based" && (
               <Input
                 placeholder="Cron expression or HH:mm"
-                value={(config.schedule as string) ?? ""}
+                value={(config.schedule as string) || ""}
                 onChange={(e) =>
                   onConfigChange({ ...config, schedule: e.target.value })
                 }
                 className="bg-slate-800 text-white"
+                style={{ color: 'white', backgroundColor: '#1e293b' }}
               />
             )}
           </div>
@@ -427,6 +534,7 @@ function KeywordMatchConfig({
             })
           }
           className="bg-slate-800 text-white"
+          style={{ color: 'white', backgroundColor: '#1e293b' }}
         />
       </div>
       <div>
@@ -434,12 +542,13 @@ function KeywordMatchConfig({
           Match type
         </label>
         <select
-          value={config?.match_type ?? "contains"}
+          value={config?.match_type || "contains"}
           onChange={(e) => onChange({ ...config, match_type: e.target.value as "exact" | "contains" })}
           className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-white focus:outline-none"
+          style={{ color: 'white', backgroundColor: '#1e293b' }}
         >
-          <option value="contains">Contains</option>
-          <option value="exact">Exact</option>
+          <option value="contains" style={{ color: 'white', backgroundColor: '#1e293b' }}>Contains</option>
+          <option value="exact" style={{ color: 'white', backgroundColor: '#1e293b' }}>Exact</option>
         </select>
       </div>
     </div>
@@ -573,6 +682,7 @@ function StepRenderer({
                     disabled={index === 0}
                     aria-label="Move up"
                     onClick={() => props.moveStepAt(path, -1)}
+                    className=""
                   >
                     <ArrowUp className="h-4 w-4" />
                   </Button>
@@ -582,6 +692,7 @@ function StepRenderer({
                     disabled={index === total - 1}
                     aria-label="Move down"
                     onClick={() => props.moveStepAt(path, 1)}
+                    className=""
                   >
                     <ArrowDown className="h-4 w-4" />
                   </Button>
@@ -621,9 +732,6 @@ function ConditionBranches({
 } & Omit<StepListProps, "steps" | "parentPath">) {
   const yes = step.branches?.yes ?? []
   const no = step.branches?.no ?? []
-  // Build the child scope by appending a branch marker. The scope the
-  // StepList uses is driven by the LAST element of parentPath, so the
-  // tail's `index` doesn't matter — it's replaced per child during walks.
   const yesPath: StepPath = [
     ...parentPath,
     { kind: "branch", parentCid: step.cid, branch: "yes", index: 0 },
@@ -682,8 +790,8 @@ function AddButton({ onPick }: { onPick: (t: AutomationStepType) => void }) {
           {ADDABLE_STEPS.map((t) => {
             const Icon = STEP_META[t].icon
             return (
-              <DropdownMenuItem key={t} onClick={() => onPick(t)}>
-                <Icon className="h-4 w-4" />
+              <DropdownMenuItem key={t} onClick={() => onPick(t)} className="text-slate-200 focus:bg-slate-700 focus:text-white">
+                <Icon className="h-4 w-4 text-slate-400" />
                 {STEP_META[t].label}
               </DropdownMenuItem>
             )
@@ -719,6 +827,7 @@ function StepEditor({
             onChange={(e) => set({ text: e.target.value })}
             placeholder="Hi! Thanks for reaching out…"
             className="min-h-24 bg-slate-800 text-white"
+            style={{ color: 'white', backgroundColor: '#1e293b' }}
           />
         </FieldBlock>
       )
@@ -730,6 +839,7 @@ function StepEditor({
               value={(cfg.template_name as string) ?? ""}
               onChange={(e) => set({ template_name: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
           <FieldBlock label="Language">
@@ -737,6 +847,7 @@ function StepEditor({
               value={(cfg.language as string) ?? ""}
               onChange={(e) => set({ language: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
         </>
@@ -749,6 +860,7 @@ function StepEditor({
             value={(cfg.tag_id as string) ?? ""}
             onChange={(e) => set({ tag_id: e.target.value })}
             className="bg-slate-800 text-white"
+            style={{ color: 'white', backgroundColor: '#1e293b' }}
           />
         </FieldBlock>
       )
@@ -757,12 +869,13 @@ function StepEditor({
         <>
           <FieldBlock label="Mode">
             <select
-              value={(cfg.mode as string) ?? "round_robin"}
+              value={(cfg.mode as string) || "round_robin"}
               onChange={(e) => set({ mode: e.target.value })}
               className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             >
-              <option value="round_robin">Round-robin</option>
-              <option value="specific">Specific agent</option>
+              <option value="round_robin" style={{ color: 'white', backgroundColor: '#1e293b' }}>Round-robin</option>
+              <option value="specific" style={{ color: 'white', backgroundColor: '#1e293b' }}>Specific agent</option>
             </select>
           </FieldBlock>
           {cfg.mode === "specific" && (
@@ -771,6 +884,7 @@ function StepEditor({
                 value={(cfg.agent_id as string) ?? ""}
                 onChange={(e) => set({ agent_id: e.target.value })}
                 className="bg-slate-800 text-white"
+                style={{ color: 'white', backgroundColor: '#1e293b' }}
               />
             </FieldBlock>
           )}
@@ -781,13 +895,14 @@ function StepEditor({
         <>
           <FieldBlock label="Field">
             <select
-              value={(cfg.field as string) ?? "name"}
+              value={(cfg.field as string) || "name"}
               onChange={(e) => set({ field: e.target.value })}
               className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             >
-              <option value="name">Name</option>
-              <option value="email">Email</option>
-              <option value="company">Company</option>
+              <option value="name" style={{ color: 'white', backgroundColor: '#1e293b' }}>Name</option>
+              <option value="email" style={{ color: 'white', backgroundColor: '#1e293b' }}>Email</option>
+              <option value="company" style={{ color: 'white', backgroundColor: '#1e293b' }}>Company</option>
             </select>
           </FieldBlock>
           <FieldBlock label="Value">
@@ -795,6 +910,7 @@ function StepEditor({
               value={(cfg.value as string) ?? ""}
               onChange={(e) => set({ value: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
         </>
@@ -807,6 +923,7 @@ function StepEditor({
               value={(cfg.pipeline_id as string) ?? ""}
               onChange={(e) => set({ pipeline_id: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
           <FieldBlock label="Stage id">
@@ -814,6 +931,7 @@ function StepEditor({
               value={(cfg.stage_id as string) ?? ""}
               onChange={(e) => set({ stage_id: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
           <FieldBlock label="Title">
@@ -821,6 +939,7 @@ function StepEditor({
               value={(cfg.title as string) ?? ""}
               onChange={(e) => set({ title: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
           <FieldBlock label="Value">
@@ -829,6 +948,7 @@ function StepEditor({
               value={(cfg.value as number) ?? 0}
               onChange={(e) => set({ value: Number(e.target.value) })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
         </>
@@ -843,17 +963,19 @@ function StepEditor({
               value={(cfg.amount as number) ?? 1}
               onChange={(e) => set({ amount: Math.max(1, Number(e.target.value)) })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
           <FieldBlock label="Unit">
             <select
-              value={(cfg.unit as string) ?? "hours"}
+              value={(cfg.unit as string) || "hours"}
               onChange={(e) => set({ unit: e.target.value })}
               className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             >
-              <option value="minutes">Minutes</option>
-              <option value="hours">Hours</option>
-              <option value="days">Days</option>
+              <option value="minutes" style={{ color: 'white', backgroundColor: '#1e293b' }}>Minutes</option>
+              <option value="hours" style={{ color: 'white', backgroundColor: '#1e293b' }}>Hours</option>
+              <option value="days" style={{ color: 'white', backgroundColor: '#1e293b' }}>Days</option>
             </select>
           </FieldBlock>
         </div>
@@ -863,14 +985,15 @@ function StepEditor({
         <>
           <FieldBlock label="Subject">
             <select
-              value={(cfg.subject as string) ?? "tag_presence"}
+              value={(cfg.subject as string) || "tag_presence"}
               onChange={(e) => set({ subject: e.target.value })}
               className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             >
-              <option value="tag_presence">Tag presence</option>
-              <option value="contact_field">Contact field</option>
-              <option value="message_content">Message content</option>
-              <option value="time_of_day">Time of day</option>
+              <option value="tag_presence" style={{ color: 'white', backgroundColor: '#1e293b' }}>Tag presence</option>
+              <option value="contact_field" style={{ color: 'white', backgroundColor: '#1e293b' }}>Contact field</option>
+              <option value="message_content" style={{ color: 'white', backgroundColor: '#1e293b' }}>Message content</option>
+              <option value="time_of_day" style={{ color: 'white', backgroundColor: '#1e293b' }}>Time of day</option>
             </select>
           </FieldBlock>
           <FieldBlock label="Operand">
@@ -887,6 +1010,7 @@ function StepEditor({
               value={(cfg.operand as string) ?? ""}
               onChange={(e) => set({ operand: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
           {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (
@@ -895,6 +1019,7 @@ function StepEditor({
                 value={(cfg.value as string) ?? ""}
                 onChange={(e) => set({ value: e.target.value })}
                 className="bg-slate-800 text-white"
+                style={{ color: 'white', backgroundColor: '#1e293b' }}
               />
             </FieldBlock>
           )}
@@ -908,6 +1033,7 @@ function StepEditor({
               value={(cfg.url as string) ?? ""}
               onChange={(e) => set({ url: e.target.value })}
               className="bg-slate-800 text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
           <FieldBlock label="Body template (JSON)">
@@ -915,6 +1041,7 @@ function StepEditor({
               value={(cfg.body_template as string) ?? ""}
               onChange={(e) => set({ body_template: e.target.value })}
               className="min-h-20 bg-slate-800 font-mono text-xs text-white"
+              style={{ color: 'white', backgroundColor: '#1e293b' }}
             />
           </FieldBlock>
         </>
