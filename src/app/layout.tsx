@@ -30,8 +30,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
-  colorScheme: "dark light",
+  themeColor: "#f8fafc",
+  colorScheme: "light dark",
+  // "dark light" => "light dark"
 };
 
 export default function RootLayout({
@@ -40,13 +41,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} dark h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} light h-full antialiased`}>
       <body className="min-h-full bg-theme-bg text-theme-text font-sans transition-colors duration-200">
         <ThemeProvider>
           {children}
         </ThemeProvider>
         <Toaster
-          theme="dark"
+          theme="light"
           position="top-right"
           toastOptions={{
             style: {

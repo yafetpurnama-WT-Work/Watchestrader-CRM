@@ -17,7 +17,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
+  theme: "light", //default
   toggleTheme: () => {},
   setTheme: () => {},
 });
@@ -25,7 +25,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 const STORAGE_KEY = "crm-wt-theme";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("light");
 
   const applyTheme = useCallback((t: Theme) => {
     const root = document.documentElement;
@@ -40,7 +40,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // ─── On mount, read theme from localStorage and apply it ───
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    const resolved = stored === "light" ? "light" : "dark";
+    const resolved = stored === "dark" ? "dark" : "light";
     setThemeState(resolved);
     applyTheme(resolved);
   }, [applyTheme]);
