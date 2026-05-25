@@ -30,7 +30,8 @@ export default function DashboardPage() {
         <MetricCard title="Messages Sent Today" value="0" icon={Send} />
       </div>
 
-      <QuickActions />
+      {/* SEMENTARA COMMAND SESUAI PERMINTAAN BAPAK RUDY */}
+      {/* <QuickActions /> */}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="h-full lg:col-span-3 rounded-xl border border-theme-border bg-theme-bg-card px-4 py-6">

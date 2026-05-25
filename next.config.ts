@@ -137,6 +137,16 @@ const nextConfig: NextConfig = {
         destination: "/roles-access",
         permanent: true,
       },
+      {
+        source: "/sales",
+        destination: "/users",
+        permanent: true,
+      },
+      {
+        source: "/organization",
+        destination: "/company",
+        permanent: true,
+      },
     ];
   },
 };

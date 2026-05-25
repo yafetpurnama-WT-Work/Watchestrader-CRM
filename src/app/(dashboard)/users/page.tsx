@@ -278,8 +278,8 @@ export default function SalesTeamPage() {
           {/* <Users className="h-[52px] w-[52px] text-violet-500 shrink-0" /> */}
           <Users size={52} className="text-violet-500 shrink-0" />
           <div>
-            <h1 className="text-2xl font-bold text-theme-text">Sales Team</h1>
-            <p className="mt-0.5 text-sm text-theme-text-muted">Manage users and sales representatives</p>
+            <h1 className="text-2xl font-bold text-theme-text">Users</h1>
+            <p className="mt-0.5 text-sm text-theme-text-muted">Management Data Users</p>
           </div>
         </div>
         {can("users.create") && (
@@ -437,7 +437,7 @@ export default function SalesTeamPage() {
                   {editingUser ? "Edit User" : "Create New User"}
                 </h2>
                 <p className="text-xs text-theme-text-muted">
-                  {editingUser ? "Update user information and access settings" : "Add a new team member to your sales team"}
+                  {editingUser ? "Update user information and access settings" : "Add a new user"}
                 </p>
               </div>
               <button type="button" onClick={closeModal} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">

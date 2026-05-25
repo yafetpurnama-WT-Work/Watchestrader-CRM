@@ -53,9 +53,27 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const navItems = [
+interface NavItem {
+  href?: string;
+  label: string;
+  icon: any;
+  children?: {
+    href: string;
+    label: string;
+    icon: any;
+  }[];
+}
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "Inbox", icon: MessageSquare },
+  { href: "/pipelines", label: "Pipelines", icon: GitBranch },
+  { href: "/automations", label: "Automations", icon: Zap },
+];
+
+const managementItems: NavItem[] = [
+  { href: "/users", label: "Users", icon: Users },
+  { href: "/company", label: "Company", icon: Building2 },
   {
     label: "Customer",
     icon: UserCircle,
@@ -66,20 +84,15 @@ const navItems = [
   },
   { href: "/leads", label: "Leads", icon: Target },
   { href: "/products", label: "Products", icon: Watch },
-  { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
-  { href: "/automations", label: "Automations", icon: Zap },
 ];
 
-const managementItems = [
-  { href: "/sales", label: "Sales Team", icon: Users },
+const setupItems: NavItem[] = [
   { href: "/roles-access", label: "Roles & Access", icon: Shield },
-  { href: "/organization", label: "Organization", icon: Building2 },
-];
-
-const bottomNavItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
+const bottomNavItems: any[] = [];
 
 interface SidebarProps {
   open?: boolean;
@@ -127,18 +140,27 @@ export function Sidebar({
     if (item.children) {
       return can("customers.view");
     }
+    return true;
+  });
+
+  const filteredMasterItemsMenu = managementItems.filter((item) => {
+    if (item.children) {
+      return can("customers.view");
+    }
     switch (item.href) {
+      case "/users": return can("users.view");
+      case "/company": return can("companies.view") || can("outlets.view");
       case "/leads": return can("leads.view");
       case "/products": return can("products.view");
-      default: return true;
+      case "/broadcasts": return true; // Add broadcast permission if exists, or return true
+      default: return false;
     }
   });
 
-  const filteredManagementItems = managementItems.filter((item) => {
+  const filteredSetupItems = setupItems.filter((item) => {
     switch (item.href) {
-      case "/sales": return can("users.view");
       case "/roles-access": return can("roles.view");
-      case "/organization": return can("companies.view") || can("outlets.view");
+      case "/settings": return true; // Settings generally available or add specific perm
       default: return false;
     }
   });
@@ -246,23 +268,22 @@ export function Sidebar({
                         >
                           {item.label}
                         </span>
-                        {!collapsed && (
-                          <div className="shrink-0 transition-transform duration-200">
-                            {customerOpen ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </div>
-                        )}
+                        {/* MOBILE LAYOUT SIDE BAR ↓ */}
+                        <div className={cn("shrink-0 transition-transform duration-200", collapsed && "lg:hidden")}>
+                          {customerOpen ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </div>
                       </div>
 
                       {/* Submenu */}
                       <div
                         className={cn(
                           "flex flex-col gap-1 overflow-hidden transition-all duration-200 ease-in-out",
-                          customerOpen && !collapsed ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
-                          collapsed && "hidden"
+                          customerOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
+                          collapsed && "lg:hidden"
                         )}
                       >
                         {item.children.map((child) => {
@@ -343,7 +364,7 @@ export function Sidebar({
 
                 const isActive =
                   pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname?.startsWith(item.href));
+                  (item.href && item.href !== "/dashboard" && pathname?.startsWith(item.href));
 
                 const showUnreadDot =
                   item.href === "/inbox" && totalUnread > 0 && !isActive;
@@ -405,7 +426,7 @@ export function Sidebar({
 
             <div className="my-3 border-t border-theme-border" />
 
-            {filteredManagementItems.length > 0 && (
+            {filteredMasterItemsMenu.length > 0 && (
               <>
                 {/* Management section label */}
                 <p
@@ -414,18 +435,144 @@ export function Sidebar({
                     collapsed && "lg:hidden",
                   )}
                 >
-                  Management
+                  MASTER MENU
+                  {/* Management */}
                 </p>
 
                 <ul className="flex flex-col gap-1">
-                  {filteredManagementItems.map((item) => {
+                  {filteredMasterItemsMenu.map((item) => {
+                    if (item.children) {
+                      const isActive = pathname === "/customers" || pathname === "/contacts";
+
+                      const groupContent = (
+                        <div className="flex w-full flex-col gap-1">
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setCustomerOpen(!customerOpen)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                setCustomerOpen(!customerOpen);
+                                e.preventDefault();
+                              }
+                            }}
+                            className={cn(
+                              "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer",
+                              collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
+                              isActive && !customerOpen
+                                ? "bg-violet-500/10 text-violet-500"
+                                : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
+                            )}
+                          >
+                            <item.icon className="h-5 w-5 shrink-0" />
+                            <span
+                              className={cn(
+                                "flex-1 text-left transition-opacity duration-200",
+                                collapsed && "lg:hidden",
+                              )}
+                            >
+                              {item.label}
+                            </span>
+                            <div className={cn("shrink-0 transition-transform duration-200", collapsed && "lg:hidden")}>
+                              {customerOpen ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Submenu */}
+                          <div
+                            className={cn(
+                              "flex flex-col gap-1 overflow-hidden transition-all duration-200 ease-in-out",
+                              customerOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
+                              collapsed && "lg:hidden"
+                            )}
+                          >
+                            {item.children.map((child) => {
+                              const isChildActive = pathname === child.href;
+                              const ChildIcon = child.icon;
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  className={cn(
+                                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-9",
+                                    isChildActive
+                                      ? "bg-violet-500/10 text-violet-500"
+                                      : "text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text",
+                                  )}
+                                >
+                                  {ChildIcon && <ChildIcon className="size-4 shrink-0" />}
+                                  {child.label}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+
+                      return (
+                        <li key={item.label} className="flex justify-center w-full">
+                          {collapsed ? (
+                            <DropdownMenu>
+                              <Tooltip>
+                                <TooltipTrigger render={<div className="hidden lg:flex w-full justify-center" />}>
+                                  <DropdownMenuTrigger className="focus:outline-none" render={groupContent} nativeButton={false} />
+                                </TooltipTrigger>
+                                <TooltipContent side="right" sideOffset={8}>
+                                  {item.label}
+                                </TooltipContent>
+                              </Tooltip>
+                              <div className="lg:hidden w-full">{groupContent}</div>
+                              <DropdownMenuContent
+                                side="right"
+                                align="start"
+                                sideOffset={8}
+                                className="w-48 bg-theme-bg-card"
+                              >
+                                <div className="px-2 py-1.5 text-sm font-semibold text-theme-text">
+                                  {item.label}
+                                </div>
+                                <DropdownMenuSeparator className="bg-theme-border" />
+                                {item.children.map((child) => {
+                                  const ChildIcon = child.icon;
+                                  return (
+                                    <DropdownMenuItem
+                                      key={child.href}
+                                    >
+                                      <Link
+                                        href={child.href}
+                                        className={cn(
+                                          "flex w-full items-center gap-2 text-sm cursor-pointer",
+                                          pathname === child.href
+                                            ? "text-violet-500 font-medium"
+                                            : "text-theme-text-secondary hover:text-theme-text"
+                                        )}
+                                      >
+                                        {ChildIcon && <ChildIcon className="size-4 shrink-0" />}
+                                        {child.label}
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  );
+                                })}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            groupContent
+                          )}
+                        </li>
+                      );
+                    }
+
                     const isActive =
                       pathname === item.href ||
-                      pathname.startsWith(item.href);
+                      (item.href && pathname.startsWith(item.href));
 
                     const linkContent = (
                       <Link
-                        href={item.href}
+                        href={item.href || "#"}
                         className={cn(
                           "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                           collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
@@ -447,7 +594,7 @@ export function Sidebar({
                     );
 
                     return (
-                      <li key={item.href} className="flex justify-center w-full">
+                      <li key={item.href || item.label} className="flex justify-center w-full">
                         {collapsed ? (
                           <Tooltip>
                             <div className="hidden lg:flex w-full justify-center">
@@ -470,51 +617,67 @@ export function Sidebar({
               </>
             )}
 
-            <ul className="flex flex-col gap-1">
-              {bottomNavItems.map((item) => {
-                const isActive = pathname.startsWith(item.href);
-                const linkContent = (
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                      collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
-                      isActive
-                        ? "bg-violet-500/10 text-violet-500"
-                        : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
-                    )}
-                  >
-                    <item.icon className="h-5 w-5 shrink-0" />
-                    <span
-                      className={cn(
-                        "transition-opacity duration-200",
-                        collapsed && "lg:hidden",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </Link>
-                );
+            {filteredSetupItems.length > 0 && (
+              <>
+                <p
+                  className={cn(
+                    "mt-3 mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-theme-text-muted",
+                    collapsed && "lg:hidden",
+                  )}
+                >
+                  SETUP
+                </p>
 
-                return (
-                  <li key={item.href} className="flex justify-center w-full">
-                    {collapsed ? (
-                      <Tooltip>
-                        <div className="hidden lg:flex w-full justify-center">
-                          <TooltipTrigger render={linkContent} />
-                        </div>
-                        <TooltipContent side="right" sideOffset={8}>
+                <ul className="flex flex-col gap-1">
+                  {filteredSetupItems.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      (item.href && pathname.startsWith(item.href));
+
+                    const linkContent = (
+                      <Link
+                        href={item.href || "#"}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                          collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
+                          isActive
+                            ? "bg-violet-500/10 text-violet-500"
+                            : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span
+                          className={cn(
+                            "transition-opacity duration-200",
+                            collapsed && "lg:hidden",
+                          )}
+                        >
                           {item.label}
-                        </TooltipContent>
-                        <div className="lg:hidden w-full">{linkContent}</div>
-                      </Tooltip>
-                    ) : (
-                      linkContent
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                        </span>
+                      </Link>
+                    );
+
+                    return (
+                      <li key={item.href || item.label} className="flex justify-center w-full">
+                        {collapsed ? (
+                          <Tooltip>
+                            <div className="hidden lg:flex w-full justify-center">
+                              <TooltipTrigger render={linkContent} />
+                            </div>
+                            <TooltipContent side="right" sideOffset={8}>
+                              {item.label}
+                            </TooltipContent>
+                            <div className="lg:hidden w-full">{linkContent}</div>
+                          </Tooltip>
+                        ) : (
+                          linkContent
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
           </nav>
 
           {/* ── Bottom controls: theme toggle + collapse toggle ── */}
