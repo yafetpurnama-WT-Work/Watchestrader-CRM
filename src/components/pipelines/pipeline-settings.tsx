@@ -107,7 +107,7 @@ export function PipelineSettings({
     try {
       await pipelinesApi.update(pipeline.id, { name: name.trim() });
       await Promise.all(
-        localStages.map((s, i) => 
+        localStages.map((s, i) =>
           pipelineStagesApi.update(pipeline.id, s.id, {
             name: s.name,
             color: s.color,
@@ -130,17 +130,17 @@ export function PipelineSettings({
   async function handleAddStage() {
     const trimmed = newStageName.trim();
     if (!trimmed) return;
-    
+
     try {
       const res = await pipelineStagesApi.create(pipeline.id, {
         name: trimmed,
         color: newStageColor,
         position: localStages.length,
       });
-      
+
       const data = res.data?.data || res.data;
       if (!data) throw new Error("No data returned");
-      
+
       setLocalStages([...localStages, data as PipelineStage]);
       setNewStageName("");
       setNewStageColor(STAGE_COLORS[(localStages.length + 1) % STAGE_COLORS.length]);
@@ -154,12 +154,12 @@ export function PipelineSettings({
       // Refuse to delete if deals still reference the stage (FK would fail).
       const dealsRes = await dealsApi.list({ stage_id: stageId });
       const deals = dealsRes.data?.data || dealsRes.data || [];
-      
+
       if (deals.length > 0) {
         toast.error("Move or delete deals in this stage first");
         return;
       }
-      
+
       await pipelineStagesApi.delete(pipeline.id, stageId);
       setLocalStages(localStages.filter((s) => s.id !== stageId));
     } catch (err) {
@@ -183,7 +183,7 @@ export function PipelineSettings({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-theme-bg-card border-theme-border max-h-[85vh] overflow-y-auto text-theme-text shadow-xl">
+      <DialogContent className="sm:max-w-md bg-theme-bg-card border-theme-border max-h-[85vh] overflow-y-auto overflow-x-hidden text-theme-text shadow-xl custom-scrollbar">
         <DialogHeader>
           <DialogTitle className="text-theme-text">Manage Pipeline</DialogTitle>
         </DialogHeader>
@@ -211,6 +211,7 @@ export function PipelineSettings({
                 Cancel
               </Button>
               <Button
+                variant="destructive"
                 onClick={handleDeletePipeline}
                 disabled={deleting}
                 className="bg-red-600 text-white hover:bg-red-700"
@@ -220,7 +221,7 @@ export function PipelineSettings({
             </div>
           </div>
         ) : (
-          <>
+          <div className="flex flex-col gap-4">
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
                 <Label className="text-theme-text-secondary">Pipeline Name</Label>
@@ -242,7 +243,7 @@ export function PipelineSettings({
                     items={localStages.map((s) => s.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2">
                       {localStages.map((stage, index) => (
                         <SortableStageRow
                           key={stage.id}
@@ -267,27 +268,29 @@ export function PipelineSettings({
 
                 {/* Add new stage */}
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {STAGE_COLORS.map((color) => (
+                  {STAGE_COLORS.map((color) => {
+                    const btnStyle = {
+                      backgroundColor: color,
+                      borderColor: newStageColor === color ? "#8b5cf6" : "transparent",
+                    };
+                    return (
                     <button
                       key={color}
                       type="button"
                       onClick={() => setNewStageColor(color)}
                       className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
-                      style={{
-                        backgroundColor: color,
-                        borderColor:
-                          newStageColor === color ? "#8b5cf6" : "transparent",
-                      }}
+                      style={btnStyle}
                       aria-label={`Pick color ${color}`}
                     />
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="flex items-center gap-2">
                   <Input
                     value={newStageName}
                     onChange={(e) => setNewStageName(e.target.value)}
                     placeholder="New stage name"
-                    className="border-theme-border bg-theme-bg-secondary text-sm text-theme-text focus-visible:ring-violet-500 placeholder:text-theme-text-muted"
+                    className="border-theme-border bg-theme-bg-card text-sm text-theme-text focus-visible:ring-violet-500 placeholder:text-theme-text-secondary shadow-sm"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleAddStage();
                     }}
@@ -297,7 +300,7 @@ export function PipelineSettings({
                     size="sm"
                     onClick={handleAddStage}
                     disabled={!newStageName.trim()}
-                    className="shrink-0 border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
+                    className="shrink-0 border-theme-border bg-theme-bg-card text-theme-text hover:bg-theme-bg-hover shadow-sm"
                   >
                     <Plus className="mr-1 h-3 w-3" />
                     Add
@@ -308,37 +311,41 @@ export function PipelineSettings({
               <Button
                 variant="outline"
                 onClick={onCreateNewPipeline}
-                className="w-full border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
+                className="w-full border-dashed border-theme-border bg-theme-bg-card text-theme-text hover:bg-theme-bg-hover hover:border-violet-500/50 hover:text-violet-500 transition-colors shadow-sm"
               >
-                <Plus className="mr-1 h-3 w-3" />
+                <Plus className="mr-1 h-4 w-4" />
                 Create a new pipeline
               </Button>
             </div>
 
-            <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/50 p-4 -mx-6 -mb-6 flex gap-2">
+            {/* <DialogFooter className="border-theme-border bg-theme-bg-secondary/50 flex gap-2 w-full justify-between items-center mt-2 sm:justify-between"> */}
+            <div className="flex w-full items-center justify-between gap-2 pt-4 mt-2 border-t border-theme-border">
               <Button
                 variant="destructive"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="mr-auto bg-red-600 hover:bg-red-700"
+                className="bg-red-600 text-white hover:bg-red-700"
               >
                 Delete Pipeline
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={saving || !name.trim()}
-                className="bg-violet-600 text-white hover:bg-violet-700"
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </>
+              <div className="flex gap-2 items-center">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="border-theme-border bg-transparent text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || !name.trim()}
+                  className="bg-violet-600 text-white hover:bg-violet-700"
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+            {/* </DialogFooter> */}
+          </div>
         )}
       </DialogContent>
     </Dialog>
@@ -410,20 +417,27 @@ function ColorSwatch({
   colors: string[];
 }) {
   const [open, setOpen] = useState(false);
+  const triggerStyle = { backgroundColor: value };
+  
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="h-4 w-4 rounded-full border border-theme-border"
-        style={{ backgroundColor: value }}
+        style={triggerStyle}
         aria-label="Change color"
       />
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute left-0 top-6 z-20 flex flex-wrap gap-1 rounded-lg border border-theme-border bg-theme-bg-card p-2 shadow-lg w-36">
-            {colors.map((c) => (
+            {colors.map((c) => {
+              const itemStyle = {
+                backgroundColor: c,
+                borderColor: c === value ? "#8b5cf6" : "transparent",
+              };
+              return (
               <button
                 key={c}
                 type="button"
@@ -432,12 +446,12 @@ function ColorSwatch({
                   setOpen(false);
                 }}
                 className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
-                style={{
-                  backgroundColor: c,
-                  borderColor: c === value ? "#8b5cf6" : "transparent",
-                }}
+                style={itemStyle}
+                aria-label={`Select color ${c}`}
+                title={`Select color ${c}`}
               />
-            ))}
+              );
+            })}
           </div>
         </>
       )}

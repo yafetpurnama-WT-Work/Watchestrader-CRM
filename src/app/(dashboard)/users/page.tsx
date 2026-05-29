@@ -219,8 +219,9 @@ export default function SalesTeamPage() {
       super_admin: "#EF4444", admin: "#8B5CF6", manager: "#3B82F6", spv: "#F59E0B", staff: "#10B981",
     };
     const c = colors[role.slug] || "#6B7280";
+    const badgeStyle = { backgroundColor: `${c}15`, color: c };
     return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${c}15`, color: c }}>
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium" style={badgeStyle}>
         <Shield className="h-3 w-3" /> {role.name}
       </span>
     );
@@ -261,14 +262,14 @@ export default function SalesTeamPage() {
     <div className="space-y-6">
       {/* ── Toast Notification ── */}
       {toast && (
-        <div className={`fixed right-4 top-20 z-[60] flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${
+        <div className={`fixed right-4 top-20 z-60 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${
           toast.type === "success"
             ? "border-green-500/20 bg-green-500/10 text-green-600"
             : "border-red-500/20 bg-red-500/10 text-red-600"
         }`}>
           {toast.type === "success" ? <CheckCircle className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
           <p className="text-sm font-medium">{toast.message}</p>
-          <button onClick={() => setToast(null)} className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
+          <button onClick={() => setToast(null)} title="Dismiss notification" aria-label="Dismiss notification" className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -295,17 +296,19 @@ export default function SalesTeamPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-theme-text-muted" />
-          <input type="text" placeholder="Search by name or email..." value={search}
+          <input type="text" placeholder="Search by name or email..." aria-label="Search by name or email" value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full rounded-xl border border-theme-border bg-theme-bg-card py-2.5 pl-10 pr-4 text-sm text-theme-text placeholder-theme-text-muted focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
           />
         </div>
         <select value={filterRole} onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
+          aria-label="Filter by role"
           className="rounded-xl border border-theme-border bg-theme-bg-card px-3 py-2.5 text-sm text-theme-text">
           <option value="">All Roles</option>
           {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
         <select value={filterCompany} onChange={(e) => { setFilterCompany(e.target.value); setPage(1); }}
+          aria-label="Filter by company"
           className="rounded-xl border border-theme-border bg-theme-bg-card px-3 py-2.5 text-sm text-theme-text">
           <option value="">All Companies</option>
           {companyList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -384,14 +387,14 @@ export default function SalesTeamPage() {
                         {can("users.update") && (
                           <button onClick={() => openEditModal(u)}
                             disabled={isProcessing}
-                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50 disabled:cursor-not-allowed" title="Edit user">
+                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50 disabled:cursor-not-allowed" title="Edit user" aria-label="Edit user">
                             <Edit2 className="h-4 w-4" />
                           </button>
                         )}
                         {can("users.delete") && (
                           <button onClick={() => setDeleteTarget(u)}
                             disabled={isProcessing}
-                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete user">
+                            className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete user" aria-label="Delete user">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -427,8 +430,8 @@ export default function SalesTeamPage() {
             autoComplete="off"
           >
             {/* Dummy inputs to intercept browser autofill */}
-            <input type="text" name="email" readOnly style={{ position: "absolute", top: "-9999px", left: "-9999px" }} tabIndex={-1} aria-hidden="true" />
-            <input type="password" name="password" readOnly style={{ position: "absolute", top: "-9999px", left: "-9999px" }} tabIndex={-1} aria-hidden="true" />
+            <input type="text" name="email" readOnly className="absolute -top-[9999px] -left-[9999px]" tabIndex={-1} aria-hidden="true" />
+            <input type="password" name="password" readOnly className="absolute -top-[9999px] -left-[9999px]" tabIndex={-1} aria-hidden="true" />
 
             {/* Header */}
             <div className="flex items-center justify-between border-b border-theme-border px-6 py-4">
@@ -440,7 +443,7 @@ export default function SalesTeamPage() {
                   {editingUser ? "Update user information and access settings" : "Add a new user"}
                 </p>
               </div>
-              <button type="button" onClick={closeModal} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
+              <button type="button" onClick={closeModal} title="Close modal" aria-label="Close modal" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -483,6 +486,8 @@ export default function SalesTeamPage() {
                       errors.password ? "border-red-500 focus:ring-red-500" : "border-slate-300 dark:border-theme-border focus:border-violet-500 focus:ring-violet-500"
                     }`} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-text-muted hover:text-theme-text">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -504,6 +509,7 @@ export default function SalesTeamPage() {
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Role *</label>
                 <select value={form.role_id} onChange={(e) => updateField("role_id", e.target.value)}
+                  aria-label="Role"
                   className={`w-full rounded-xl border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg focus:outline-none focus:ring-1 ${
                     errors.role_id ? "border-red-500 focus:ring-red-500" : "border-slate-300 dark:border-theme-border focus:border-violet-500 focus:ring-violet-500"
                   }`}>
@@ -533,6 +539,7 @@ export default function SalesTeamPage() {
                         <span key={id} className="inline-flex items-center gap-1 rounded-lg bg-violet-500/10 pl-2 pr-1 py-1 text-xs font-medium text-violet-500">
                           <Building2 className="h-3 w-3" /> {c.name}
                           <button type="button" onClick={(e) => { e.stopPropagation(); toggleCompany(id); }}
+                            title={`Remove ${c.name}`} aria-label={`Remove ${c.name}`}
                             className="ml-0.5 rounded p-0.5 hover:bg-violet-500/20 transition-colors">
                             <X className="h-3 w-3" />
                           </button>
@@ -576,6 +583,7 @@ export default function SalesTeamPage() {
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Outlet / Branch</label>
                 <select value={form.outlet_id} onChange={(e) => updateField("outlet_id", e.target.value)}
                   disabled={form.company_ids.length === 0}
+                  aria-label="Outlet / Branch"
                   className="w-full rounded-xl border border-slate-300 dark:border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed">
                   <option value="">{form.company_ids.length > 0 ? "Select outlet..." : "Select a company first"}</option>
                   {filteredOutlets.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -586,6 +594,7 @@ export default function SalesTeamPage() {
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Status</label>
                 <select value={form.status} onChange={(e) => updateField("status", e.target.value)}
+                  aria-label="Status"
                   className="w-full rounded-xl border border-slate-300 dark:border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500">
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>

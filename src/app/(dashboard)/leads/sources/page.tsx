@@ -119,7 +119,7 @@ export default function LeadSourcesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/leads" className="flex h-10 w-10 items-center justify-center rounded-xl border border-theme-border bg-theme-bg-card text-theme-text-muted hover:text-theme-text transition-colors">
+          <Link href="/leads" title="Back to leads" aria-label="Back to leads" className="flex h-10 w-10 items-center justify-center rounded-xl border border-theme-border bg-theme-bg-card text-theme-text-muted hover:text-theme-text transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex items-center gap-3">
@@ -165,11 +165,13 @@ export default function LeadSourcesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-theme-border">
-                {sources.map((source) => (
+                {sources.map((source) => {
+                  const dotStyle = { backgroundColor: source.color };
+                  return (
                   <tr key={source.id} className="hover:bg-theme-bg/30">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-4 w-4 rounded-full" style={{ backgroundColor: source.color }} />
+                        <div className="h-4 w-4 rounded-full" style={dotStyle} />
                         <span className="font-semibold text-theme-text">{source.name}</span>
                       </div>
                     </td>
@@ -187,12 +189,16 @@ export default function LeadSourcesPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenModal(source)}
+                          title="Edit source"
+                          aria-label="Edit source"
                           className="p-2 text-theme-text-muted hover:text-theme-text"
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setDeleteTarget({ id: source.id, name: source.name })}
+                          title="Delete source"
+                          aria-label="Delete source"
                           className="p-2 text-theme-text-muted hover:text-red-500"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -200,7 +206,8 @@ export default function LeadSourcesPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -225,6 +232,7 @@ export default function LeadSourcesPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Website, Instagram"
+                  aria-label="Source Name"
                   className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text placeholder-theme-text-muted focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
                 />
               </div>
@@ -247,6 +255,7 @@ export default function LeadSourcesPage() {
                     type="color"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
+                    aria-label="Color picker"
                     className="h-10 w-14 rounded-xl cursor-pointer"
                   />
                   <input
@@ -255,6 +264,7 @@ export default function LeadSourcesPage() {
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="#FFFFFF"
+                    aria-label="Color hex value"
                     className="flex-1 rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text placeholder-theme-text-muted focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
                   />
                 </div>
@@ -294,7 +304,7 @@ export default function LeadSourcesPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
           <button type="button" aria-label="Close" onClick={() => setDeleteTarget(null)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative w-full max-w-sm rounded-2xl bg-theme-bg-card p-6 text-center shadow-xl animate-in fade-in zoom-in-95">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-500">
@@ -319,10 +329,10 @@ export default function LeadSourcesPage() {
 
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed right-4 top-20 z-[60] flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${toast.type === "success" ? "border-green-500/20 bg-green-500/10 text-green-600" : "border-red-500/20 bg-red-500/10 text-red-600"}`}>
+        <div className={`fixed right-4 top-20 z-60 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${toast.type === "success" ? "border-green-500/20 bg-green-500/10 text-green-600" : "border-red-500/20 bg-red-500/10 text-red-600"}`}>
           {toast.type === "success" ? <CheckCircle className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
           <p className="text-sm font-medium">{toast.message}</p>
-          <button onClick={() => setToast(null)} className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
+          <button onClick={() => setToast(null)} title="Dismiss notification" aria-label="Dismiss notification" className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
         </div>
       )}
     </div>

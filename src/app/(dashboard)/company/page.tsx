@@ -197,14 +197,14 @@ export default function CompanyPage() {
     <div className="space-y-6">
       {/* Toast */}
       {toast && (
-        <div className={`fixed right-4 top-20 z-[60] flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${
+        <div className={`fixed right-4 top-20 z-60 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${
           toast.type === "success"
             ? "border-green-500/20 bg-green-500/10 text-green-600"
             : "border-red-500/20 bg-red-500/10 text-red-600"
         }`}>
           {toast.type === "success" ? <CheckCircle className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
           <p className="text-sm font-medium">{toast.message}</p>
-          <button onClick={() => setToast(null)} className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
+          <button onClick={() => setToast(null)} title="Dismiss notification" aria-label="Dismiss notification" className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -270,7 +270,7 @@ export default function CompanyPage() {
                     )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-theme-text-muted">
-                    {company.email && <span className="truncate max-w-[150px] sm:max-w-none">{company.email}</span>}
+                    {company.email && <span className="truncate max-w-37.5 sm:max-w-none">{company.email}</span>}
                     {company.phone && <span className="truncate">{company.phone}</span>}
                     <span className="flex items-center gap-1 whitespace-nowrap">
                       <Store className="h-3 w-3" /> {outlets.length} outlets
@@ -285,6 +285,8 @@ export default function CompanyPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); openCompanyModal(company); }}
                       disabled={isProcessing}
+                      title="Edit company"
+                      aria-label="Edit company"
                       className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -294,6 +296,8 @@ export default function CompanyPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget({ type: 'company', id: company.id, name: company.name }); }}
                       disabled={isProcessing}
+                      title="Delete company"
+                      aria-label="Delete company"
                       className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -336,12 +340,12 @@ export default function CompanyPage() {
                             <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-500">Inactive</span>
                           )}
                           {can("outlets.update") && (
-                            <button disabled={isProcessing} onClick={() => openOutletModal(outlet)} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50">
+                            <button disabled={isProcessing} onClick={() => openOutletModal(outlet)} title="Edit outlet" aria-label="Edit outlet" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50">
                               <Edit2 className="h-4 w-4" />
                             </button>
                           )}
                           {can("outlets.delete") && (
-                            <button disabled={isProcessing} onClick={() => setDeleteTarget({ type: 'outlet', id: outlet.id, name: outlet.name })} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50">
+                            <button disabled={isProcessing} onClick={() => setDeleteTarget({ type: 'outlet', id: outlet.id, name: outlet.name })} title="Delete outlet" aria-label="Delete outlet" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           )}
@@ -372,28 +376,28 @@ export default function CompanyPage() {
           <form onSubmit={handleCompanySubmit} className="relative z-10 mx-4 w-full max-w-lg rounded-2xl border border-theme-border bg-theme-bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-theme-border px-6 py-4">
               <h2 className="text-lg font-bold text-theme-text">{editingCompany ? "Edit Company" : "Add Company"}</h2>
-              <button type="button" onClick={() => setShowCompanyModal(false)} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text"><X className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setShowCompanyModal(false)} title="Close" aria-label="Close" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text"><X className="h-5 w-5" /></button>
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Name *</label>
-                <input type="text" required value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required aria-label="Company name" value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Code *</label>
-                <input type="text" required value={companyForm.code} onChange={(e) => setCompanyForm({ ...companyForm, code: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required aria-label="Company code" value={companyForm.code} onChange={(e) => setCompanyForm({ ...companyForm, code: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Email</label>
-                <input type="email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="email" aria-label="Company email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Phone</label>
-                <input type="text" value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" aria-label="Company phone" value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Address</label>
-                <textarea value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <textarea aria-label="Company address" value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="companyActive" checked={companyForm.is_active} onChange={(e) => setCompanyForm({ ...companyForm, is_active: e.target.checked })} className="h-4 w-4 rounded border-slate-300 dark:border-theme-border text-violet-600 focus:ring-violet-500" />
@@ -417,35 +421,35 @@ export default function CompanyPage() {
           <form onSubmit={handleOutletSubmit} className="relative z-10 mx-4 w-full max-w-lg rounded-2xl border border-theme-border bg-theme-bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-theme-border px-6 py-4">
               <h2 className="text-lg font-bold text-theme-text">{editingOutlet ? "Edit Outlet" : "Add Outlet"}</h2>
-              <button type="button" onClick={() => setShowOutletModal(false)} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text"><X className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setShowOutletModal(false)} title="Close" aria-label="Close" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text"><X className="h-5 w-5" /></button>
             </div>
             <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Company *</label>
-                <select required value={outletForm.company_id} onChange={(e) => setOutletForm({ ...outletForm, company_id: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none">
+                <select required aria-label="Company" value={outletForm.company_id} onChange={(e) => setOutletForm({ ...outletForm, company_id: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none">
                   <option value="">Select a company</option>
                   {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Name *</label>
-                <input type="text" required value={outletForm.name} onChange={(e) => setOutletForm({ ...outletForm, name: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required aria-label="Outlet name" value={outletForm.name} onChange={(e) => setOutletForm({ ...outletForm, name: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Code *</label>
-                <input type="text" required value={outletForm.code} onChange={(e) => setOutletForm({ ...outletForm, code: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required aria-label="Outlet code" value={outletForm.code} onChange={(e) => setOutletForm({ ...outletForm, code: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">City *</label>
-                <input type="text" required value={outletForm.city} onChange={(e) => setOutletForm({ ...outletForm, city: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required aria-label="Outlet city" value={outletForm.city} onChange={(e) => setOutletForm({ ...outletForm, city: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Phone</label>
-                <input type="text" value={outletForm.phone} onChange={(e) => setOutletForm({ ...outletForm, phone: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" aria-label="Outlet phone" value={outletForm.phone} onChange={(e) => setOutletForm({ ...outletForm, phone: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Address</label>
-                <textarea value={outletForm.address} onChange={(e) => setOutletForm({ ...outletForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <textarea aria-label="Outlet address" value={outletForm.address} onChange={(e) => setOutletForm({ ...outletForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" id="outletActive" checked={outletForm.is_active} onChange={(e) => setOutletForm({ ...outletForm, is_active: e.target.checked })} className="h-4 w-4 rounded border-slate-300 dark:border-theme-border text-violet-600 focus:ring-violet-500" />

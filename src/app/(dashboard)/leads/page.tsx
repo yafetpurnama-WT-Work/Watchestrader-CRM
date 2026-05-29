@@ -225,10 +225,10 @@ export default function LeadsPage() {
   return (
     <div className="space-y-6">
       {toast && (
-        <div className={`fixed right-4 top-20 z-[60] flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${toast.type === "success" ? "border-green-500/20 bg-green-500/10 text-green-600" : "border-red-500/20 bg-red-500/10 text-red-600"}`}>
+        <div className={`fixed right-4 top-20 z-60 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all animate-in slide-in-from-right duration-300 ${toast.type === "success" ? "border-green-500/20 bg-green-500/10 text-green-600" : "border-red-500/20 bg-red-500/10 text-red-600"}`}>
           {toast.type === "success" ? <CheckCircle className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
           <p className="text-sm font-medium">{toast.message}</p>
-          <button onClick={() => setToast(null)} className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
+          <button onClick={() => setToast(null)} title="Dismiss notification" aria-label="Dismiss notification" className="ml-2 rounded p-0.5 hover:bg-black/5"><X className="h-4 w-4" /></button>
         </div>
       )}
       {/* Header */}
@@ -258,7 +258,9 @@ export default function LeadsPage() {
         >
           All
         </button>
-        {statusList.map((cfg) => (
+        {statusList.map((cfg) => {
+          const btnStyle = filterStatus === cfg.id ? { backgroundColor: cfg.color } : undefined;
+          return (
           <button
             key={cfg.id}
             onClick={() => { setFilterStatus(cfg.id); setPage(1); }}
@@ -267,11 +269,12 @@ export default function LeadsPage() {
                 ? "bg-theme-bg-hover text-white shadow-sm ring-1 ring-black/5"
                 : "text-theme-text-muted hover:bg-theme-bg-hover/50 hover:text-theme-text"
             }`}
-            style={filterStatus === cfg.id ? { backgroundColor: cfg.color } : {}}
+            style={btnStyle}
           >
             {cfg.name}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* Filters */}
@@ -289,6 +292,7 @@ export default function LeadsPage() {
         <select
           value={filterSource}
           onChange={(e) => { setFilterSource(e.target.value); setPage(1); }}
+          aria-label="Filter by source"
           className="rounded-xl border border-theme-border bg-theme-bg-card px-3 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none"
         >
           <option value="">All Sources</option>
@@ -347,22 +351,30 @@ export default function LeadsPage() {
                         <p className="text-xs text-theme-text-muted">{l.customer?.phone || ""}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                          style={{ backgroundColor: cfg.color + "15", color: cfg.color }}
-                        >
-                          {cfg.name}
-                        </span>
+                        {(() => {
+                          const statusStyle = { backgroundColor: cfg.color + "15", color: cfg.color };
+                          return (
+                            <span
+                              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                              style={statusStyle}
+                            >
+                              {cfg.name}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3">
-                        {l.source ? (
-                          <span
-                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                            style={{ backgroundColor: `${l.source.color}15`, color: l.source.color }}
-                          >
-                            {l.source.name}
-                          </span>
-                        ) : (
+                        {l.source ? (() => {
+                          const sourceStyle = { backgroundColor: `${l.source.color}15`, color: l.source.color };
+                          return (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                              style={sourceStyle}
+                            >
+                              {l.source.name}
+                            </span>
+                          );
+                        })() : (
                           <span className="text-xs text-theme-text-muted">—</span>
                         )}
                       </td>
@@ -373,7 +385,7 @@ export default function LeadsPage() {
                         {(l as any).assigned_to_user?.full_name || (l.assigned_to ? "Assigned" : "—")}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-theme-bg-secondary text-xs font-medium text-theme-text-secondary">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-theme-bg-secondary text-xs font-medium text-theme-text-secondary">
                           {l.sub_leads_count ?? 0}
                         </span>
                       </td>
@@ -385,16 +397,16 @@ export default function LeadsPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
+                          <button title="View lead" aria-label="View lead" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
                             <Eye className="h-4 w-4" />
                           </button>
                           {can("leads.update") && (
-                            <button onClick={() => openEditModal(l)} disabled={isProcessing} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button onClick={() => openEditModal(l)} disabled={isProcessing} title="Edit lead" aria-label="Edit lead" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text disabled:opacity-50 disabled:cursor-not-allowed">
                               {loadingEditId === l.id ? <Loader2 className="h-4 w-4 animate-spin text-violet-500" /> : <Edit2 className="h-4 w-4" />}
                             </button>
                           )}
                           {can("leads.delete") && (
-                            <button onClick={() => setDeleteTarget(l)} disabled={isProcessing} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button onClick={() => setDeleteTarget(l)} disabled={isProcessing} title="Delete lead" aria-label="Delete lead" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           )}
@@ -428,7 +440,7 @@ export default function LeadsPage() {
                 <h2 className="text-lg font-bold text-theme-text">{editingLead ? "Edit Lead" : "Create Lead"}</h2>
                 <p className="text-xs text-theme-text-muted">{editingLead ? "Update lead information" : "Add a new lead to your pipeline"}</p>
               </div>
-              <button type="button" onClick={closeModal} className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
+              <button type="button" onClick={closeModal} title="Close modal" aria-label="Close modal" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -493,7 +505,7 @@ export default function LeadsPage() {
 
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <button type="button" onClick={() => setDeleteTarget(null)} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <button type="button" onClick={() => setDeleteTarget(null)} aria-label="Close delete confirmation" className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative z-10 mx-4 w-full max-w-sm rounded-2xl border border-theme-border bg-theme-bg-card shadow-2xl">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">

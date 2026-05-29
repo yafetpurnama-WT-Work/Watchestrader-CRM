@@ -109,6 +109,7 @@ export function SearchableSelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        aria-label={selectedOption ? selectedOption.label : placeholder}
         disabled={disabled || loading}
         style={{
           backgroundColor: 'var(--theme-input-bg, var(--theme-bg))',
@@ -141,7 +142,7 @@ export function SearchableSelect({
         sideOffset={4}
         align="start"
         // Ensure popover is positioned nicely and inherits correct width
-        className="w-(--anchor-width) min-w-[200px] max-w-full p-0 bg-theme-bg-secondary border border-theme-border rounded-xl shadow-lg z-50 flex flex-col overflow-hidden"
+        className="w-(--anchor-width) min-w-50 max-w-full p-0 bg-theme-bg-secondary border border-theme-border rounded-xl shadow-lg z-50 flex flex-col overflow-hidden"
       >
         {/* Search Input Bar */}
         <div className="flex items-center gap-2 border-b border-theme-border px-3 py-2 bg-theme-bg-secondary sticky top-0 z-10 shrink-0">
@@ -153,12 +154,15 @@ export function SearchableSelect({
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
             className="w-full bg-transparent text-sm text-theme-text placeholder-theme-text-muted outline-hidden border-0 p-0 focus:ring-0"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch("")}
+              title="Clear search"
+              aria-label="Clear search"
               className="p-0.5 rounded-full hover:bg-theme-bg text-theme-text-muted hover:text-theme-text transition-colors"
             >
               <X className="h-3.5 w-3.5" />
@@ -170,7 +174,7 @@ export function SearchableSelect({
         {/* max-h-[384px] corresponds to exactly 12 items (32px each) or slightly less/more, allowing scroll */}
         <div
           ref={listRef}
-          className="p-1 max-h-[384px] overflow-y-auto custom-scrollbar flex flex-col gap-0.5"
+          className="p-1 max-h-96 overflow-y-auto custom-scrollbar flex flex-col gap-0.5"
         >
           {filteredOptions.length === 0 ? (
             <div className="py-6 px-3 text-center text-xs text-theme-text-muted select-none">

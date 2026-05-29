@@ -203,7 +203,7 @@ export function Sidebar({
             open ? "translate-x-0" : "-translate-x-full",
             "w-64 sm:w-72",
             "lg:static lg:z-0 lg:translate-x-0",
-            collapsed ? "lg:w-[4.5rem]" : "lg:w-60",
+            collapsed ? "lg:w-18" : "lg:w-60",
           )}
           aria-label="Primary"
         >
@@ -248,7 +248,7 @@ export function Sidebar({
 
           {/* ── Main navigation ── */}
           <nav className="flex-1 overflow-y-auto px-2 py-3">
-            <ul className="flex flex-col gap-1">
+            <div role="list" className="flex flex-col gap-1">
               {filteredNavItems.map((item) => {
                 if (item.children) {
                   const isActive = pathname === "/customers" || pathname === "/contacts";
@@ -258,6 +258,7 @@ export function Sidebar({
                       <div
                         role="button"
                         tabIndex={0}
+                        aria-label={`${customerOpen ? "Collapse" : "Expand"} ${item.label}`}
                         onClick={() => setCustomerOpen(!customerOpen)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -324,7 +325,7 @@ export function Sidebar({
                   );
 
                   return (
-                    <li key={item.label} className="flex justify-center w-full">
+                    <div role="listitem" key={item.label} className="flex justify-center w-full">
                       {collapsed ? (
                         <DropdownMenu>
                           <Tooltip>
@@ -372,7 +373,7 @@ export function Sidebar({
                       ) : (
                         groupContent
                       )}
-                    </li>
+                    </div>
                   );
                 }
 
@@ -419,7 +420,7 @@ export function Sidebar({
                 );
 
                 return (
-                  <li key={item.href || item.label} className="flex justify-center w-full">
+                  <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
                     {collapsed ? (
                       <Tooltip>
                         <div className="hidden lg:flex w-full justify-center">
@@ -433,10 +434,10 @@ export function Sidebar({
                     ) : (
                       linkContent
                     )}
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
 
             <div className="my-3 border-t border-theme-border" />
 
@@ -453,7 +454,7 @@ export function Sidebar({
                   {/* Management */}
                 </p>
 
-                <ul className="flex flex-col gap-1">
+                <div role="list" className="flex flex-col gap-1">
                   {filteredMasterItemsMenu.map((item) => {
                     if (item.children) {
                       const isActive = pathname === "/customers" || pathname === "/contacts";
@@ -463,6 +464,7 @@ export function Sidebar({
                           <div
                             role="button"
                             tabIndex={0}
+                            aria-label={`${customerOpen ? "Collapse" : "Expand"} ${item.label}`}
                             onClick={() => setCustomerOpen(!customerOpen)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
@@ -528,7 +530,7 @@ export function Sidebar({
                       );
 
                       return (
-                        <li key={item.label} className="flex justify-center w-full">
+                        <div role="listitem" key={item.label} className="flex justify-center w-full">
                           {collapsed ? (
                             <DropdownMenu>
                               <Tooltip>
@@ -576,7 +578,7 @@ export function Sidebar({
                           ) : (
                             groupContent
                           )}
-                        </li>
+                        </div>
                       );
                     }
 
@@ -608,7 +610,7 @@ export function Sidebar({
                     );
 
                     return (
-                      <li key={item.href || item.label} className="flex justify-center w-full">
+                      <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
                         {collapsed ? (
                           <Tooltip>
                             <div className="hidden lg:flex w-full justify-center">
@@ -622,10 +624,10 @@ export function Sidebar({
                         ) : (
                           linkContent
                         )}
-                      </li>
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
 
                 <div className="my-3 border-t border-theme-border" />
               </>
@@ -642,7 +644,7 @@ export function Sidebar({
                   SETUP
                 </p>
 
-                <ul className="flex flex-col gap-1">
+                <div role="list" className="flex flex-col gap-1">
                   {filteredSetupItems.map((item) => {
                     const isActive =
                       pathname === item.href ||
@@ -672,7 +674,7 @@ export function Sidebar({
                     );
 
                     return (
-                      <li key={item.href || item.label} className="flex justify-center w-full">
+                      <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
                         {collapsed ? (
                           <Tooltip>
                             <div className="hidden lg:flex w-full justify-center">
@@ -686,10 +688,10 @@ export function Sidebar({
                         ) : (
                           linkContent
                         )}
-                      </li>
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               </>
             )}
           </nav>
@@ -770,6 +772,7 @@ export function Sidebar({
           <div className="shrink-0 border-t border-theme-border p-2">
             <DropdownMenu>
               <DropdownMenuTrigger
+                aria-label="User menu"
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                   "hover:bg-theme-bg-hover focus:bg-theme-bg-hover focus:outline-none",
