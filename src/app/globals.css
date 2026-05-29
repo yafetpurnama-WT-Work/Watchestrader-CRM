@@ -103,6 +103,8 @@
   --theme-text: #f8fafc;
   --theme-text-secondary: #94a3b8;
   --theme-text-muted: #64748b;
+  --theme-input-bg: #0f172a;
+  --theme-input-border: #334155;
 }
 
 /* ─── Light theme — higher specificity with html.light ─── */
@@ -150,6 +152,8 @@ html.light *,
   --theme-text: #0f172a;
   --theme-text-secondary: #475569;
   --theme-text-muted: #94a3b8;
+  --theme-input-bg: #ffffff;
+  --theme-input-border: #cbd5e1;
 }
 
 @layer base {
@@ -164,12 +168,59 @@ html.light *,
   }
 }
 
+/* ─── Global form field styles for Light Theme ─── */
+html.light input[type="text"],
+html.light input[type="email"],
+html.light input[type="password"],
+html.light input[type="number"],
+html.light input[type="tel"],
+html.light input[type="url"],
+html.light input[type="search"],
+html.light input[type="date"],
+html.light input:not([type]),
+html.light select,
+html.light textarea {
+  background-color: var(--theme-input-bg) !important;
+  border-color: var(--theme-input-border) !important;
+  color: var(--theme-text) !important;
+}
+
+html.light input[type="text"]:focus,
+html.light input[type="email"]:focus,
+html.light input[type="password"]:focus,
+html.light input[type="number"]:focus,
+html.light input[type="tel"]:focus,
+html.light input[type="url"]:focus,
+html.light input[type="search"]:focus,
+html.light input[type="date"]:focus,
+html.light input:not([type]):focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 1px #8b5cf6;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light input:disabled,
+html.light input:not([type]):disabled,
+html.light select:disabled,
+html.light textarea:disabled {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Override default browser autofill styles to match theme colors */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px var(--theme-bg) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--theme-input-bg, var(--theme-bg)) inset !important;
   -webkit-text-fill-color: var(--theme-text) !important;
   transition: background-color 5000s ease-in-out 0s;
 }

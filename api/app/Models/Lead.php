@@ -18,7 +18,7 @@ class Lead extends Model
         'customer_id',
         'assigned_to',
         'source_id',
-        'status',
+        'status_id',
         'title',
         'notes',
         'value',
@@ -36,6 +36,11 @@ class Lead extends Model
     }
 
     // --- Relationships ---
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(LeadStatus::class, 'status_id');
+    }
 
     public function customer(): BelongsTo
     {
@@ -120,8 +125,8 @@ class Lead extends Model
         });
     }
 
-    public function scopeStatus(Builder $query, string $status): Builder
+    public function scopeStatus(Builder $query, string $statusId): Builder
     {
-        return $query->where('status', $status);
+        return $query->where('status_id', $statusId);
     }
 }

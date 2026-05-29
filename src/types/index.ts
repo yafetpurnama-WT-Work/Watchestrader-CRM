@@ -572,7 +572,14 @@ export interface CustomerStatusHistory {
 // Lead Types
 // ==========================================
 
-export type LeadStatus = 'junk' | 'cold' | 'mql' | 'hot' | 'deal_won' | 'deal_lost';
+export interface LeadStatus {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  position: number;
+  is_default: boolean;
+}
 
 export interface LeadSource {
   id: string;
@@ -589,7 +596,8 @@ export interface Lead {
   customer_id: string;
   assigned_to?: string;
   source_id?: string;
-  status: LeadStatus;
+  status_id: string;
+  status?: LeadStatus;
   title: string;
   notes?: string;
   value: number;
@@ -617,7 +625,8 @@ export interface SubLead {
   title: string;
   notes?: string;
   value: number;
-  status: LeadStatus;
+  status_id: string;
+  status?: LeadStatus;
   product?: Product;
   created_by?: string;
   created_at: string;

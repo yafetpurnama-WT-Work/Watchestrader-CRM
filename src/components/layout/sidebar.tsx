@@ -33,6 +33,9 @@ import {
   ChevronDown,
   FileText,
   UserSquare,
+  List,
+  Network,
+  CheckCircle,
 } from "lucide-react";
 import {
   Avatar,
@@ -82,7 +85,15 @@ const managementItems: NavItem[] = [
       { href: "/contacts", label: "Detail", icon: FileText },
     ],
   },
-  { href: "/leads", label: "Leads", icon: Target },
+  {
+    label: "Leads",
+    icon: Target,
+    children: [
+      { href: "/leads", label: "Data Leads", icon: List },
+      { href: "/leads/sources", label: "Sources", icon: Network },
+      { href: "/leads/statuses", label: "Statuses", icon: CheckCircle },
+    ],
+  },
   { href: "/products", label: "Products", icon: Watch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
 ];
@@ -150,7 +161,10 @@ export function Sidebar({
     switch (item.href) {
       case "/users": return can("users.view");
       case "/company": return can("companies.view") || can("outlets.view");
+      case "/customers": return can("customers.view");
       case "/leads": return can("leads.view");
+      case "/leads/sources": return can("leads.view");
+      case "/leads/statuses": return can("leads.view");
       case "/products": return can("products.view");
       case "/broadcasts": return true; // Add broadcast permission if exists, or return true
       default: return false;
@@ -297,7 +311,7 @@ export function Sidebar({
                                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-9",
                                 isChildActive
                                   ? "bg-violet-500/10 text-violet-500"
-                                  : "text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text",
+                                  : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
                               )}
                             >
                               {ChildIcon && <ChildIcon className="size-4 shrink-0" />}
@@ -501,7 +515,7 @@ export function Sidebar({
                                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-9",
                                     isChildActive
                                       ? "bg-violet-500/10 text-violet-500"
-                                      : "text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text",
+                                      : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
                                   )}
                                 >
                                   {ChildIcon && <ChildIcon className="size-4 shrink-0" />}

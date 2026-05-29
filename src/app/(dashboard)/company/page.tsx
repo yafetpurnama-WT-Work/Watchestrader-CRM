@@ -377,26 +377,26 @@ export default function CompanyPage() {
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Name *</label>
-                <input type="text" required value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Code *</label>
-                <input type="text" required value={companyForm.code} onChange={(e) => setCompanyForm({ ...companyForm, code: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required value={companyForm.code} onChange={(e) => setCompanyForm({ ...companyForm, code: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Email</label>
-                <input type="email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Phone</label>
-                <input type="text" value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Address</label>
-                <textarea value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <textarea value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="companyActive" checked={companyForm.is_active} onChange={(e) => setCompanyForm({ ...companyForm, is_active: e.target.checked })} className="h-4 w-4 rounded border-theme-border text-violet-600 focus:ring-violet-500" />
+                <input type="checkbox" id="companyActive" checked={companyForm.is_active} onChange={(e) => setCompanyForm({ ...companyForm, is_active: e.target.checked })} className="h-4 w-4 rounded border-slate-300 dark:border-theme-border text-violet-600 focus:ring-violet-500" />
                 <label htmlFor="companyActive" className="text-sm font-medium text-theme-text">Active Status</label>
               </div>
             </div>
@@ -422,33 +422,33 @@ export default function CompanyPage() {
             <div className="max-h-[70vh] overflow-y-auto px-6 py-5 space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Company *</label>
-                <select required value={outletForm.company_id} onChange={(e) => setOutletForm({ ...outletForm, company_id: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none">
+                <select required value={outletForm.company_id} onChange={(e) => setOutletForm({ ...outletForm, company_id: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none">
                   <option value="">Select a company</option>
                   {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Name *</label>
-                <input type="text" required value={outletForm.name} onChange={(e) => setOutletForm({ ...outletForm, name: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required value={outletForm.name} onChange={(e) => setOutletForm({ ...outletForm, name: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Code *</label>
-                <input type="text" required value={outletForm.code} onChange={(e) => setOutletForm({ ...outletForm, code: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required value={outletForm.code} onChange={(e) => setOutletForm({ ...outletForm, code: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">City *</label>
-                <input type="text" required value={outletForm.city} onChange={(e) => setOutletForm({ ...outletForm, city: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" required value={outletForm.city} onChange={(e) => setOutletForm({ ...outletForm, city: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Phone</label>
-                <input type="text" value={outletForm.phone} onChange={(e) => setOutletForm({ ...outletForm, phone: e.target.value })} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <input type="text" value={outletForm.phone} onChange={(e) => setOutletForm({ ...outletForm, phone: e.target.value })} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase">Address</label>
-                <textarea value={outletForm.address} onChange={(e) => setOutletForm({ ...outletForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-theme-border bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
+                <textarea value={outletForm.address} onChange={(e) => setOutletForm({ ...outletForm, address: e.target.value })} rows={3} className="w-full rounded-xl border border-slate-300 dark:border-theme-border bg-theme-bg-card dark:bg-theme-bg px-4 py-2.5 text-sm text-theme-text focus:border-violet-500 focus:outline-none" />
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="outletActive" checked={outletForm.is_active} onChange={(e) => setOutletForm({ ...outletForm, is_active: e.target.checked })} className="h-4 w-4 rounded border-theme-border text-violet-600 focus:ring-violet-500" />
+                <input type="checkbox" id="outletActive" checked={outletForm.is_active} onChange={(e) => setOutletForm({ ...outletForm, is_active: e.target.checked })} className="h-4 w-4 rounded border-slate-300 dark:border-theme-border text-violet-600 focus:ring-violet-500" />
                 <label htmlFor="outletActive" className="text-sm font-medium text-theme-text">Active Status</label>
               </div>
             </div>

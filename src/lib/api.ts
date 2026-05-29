@@ -481,6 +481,25 @@ export const leadSources = {
     apiFetch(`/lead-sources/${id}`, { method: 'DELETE' }),
 }
 
+// ─── Lead Statuses ───────────────────────────────────────────────────────────
+
+export const leadStatuses = {
+  list: (params?: Record<string, string>) =>
+    apiFetch(`/lead-statuses${qs(params)}`),
+
+  create: (data: any) =>
+    apiFetch('/lead-statuses', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id: string, data: any) =>
+    apiFetch(`/lead-statuses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id: string) =>
+    apiFetch(`/lead-statuses/${id}`, { method: 'DELETE' }),
+
+  reorder: (data: { ordered_ids: string[] }) =>
+    apiFetch('/lead-statuses/reorder', { method: 'POST', body: JSON.stringify(data) }),
+}
+
 // ─── Leads ───────────────────────────────────────────────────────────────────
 
 export const leads = {

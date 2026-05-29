@@ -110,11 +110,19 @@ export function SearchableSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         disabled={disabled || loading}
+        style={{
+          backgroundColor: 'var(--theme-input-bg, var(--theme-bg))',
+          borderColor: error
+            ? undefined
+            : open
+              ? undefined
+              : 'var(--theme-input-border, var(--theme-border))',
+        }}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm text-theme-text bg-theme-bg text-left transition-all outline-hidden disabled:opacity-50 disabled:cursor-not-allowed select-none",
+          "flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm text-theme-text text-left transition-all outline-hidden disabled:opacity-50 disabled:cursor-not-allowed select-none",
           error
             ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-1 focus-visible:ring-red-500"
-            : "border-theme-border hover:border-theme-text-muted focus-visible:border-violet-500 focus-visible:ring-1 focus-visible:ring-violet-500",
+            : "hover:border-theme-text-muted focus-visible:border-violet-500 focus-visible:ring-1 focus-visible:ring-violet-500",
           open && !error && "border-violet-500 ring-1 ring-violet-500",
           className
         )}

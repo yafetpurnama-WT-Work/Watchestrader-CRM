@@ -452,8 +452,8 @@ export default function SalesTeamPage() {
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Full Name *</label>
                 <input type="text" value={form.full_name} onChange={(e) => updateField("full_name", e.target.value)}
                   placeholder="e.g. John Doe"
-                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-theme-text bg-theme-bg placeholder-theme-text-muted focus:outline-none focus:ring-1 ${
-                    errors.full_name ? "border-red-500 focus:ring-red-500" : "border-theme-border focus:border-violet-500 focus:ring-violet-500"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg placeholder-theme-text-muted focus:outline-none focus:ring-1 ${
+                    errors.full_name ? "border-red-500 focus:ring-red-500" : "border-slate-300 dark:border-theme-border focus:border-violet-500 focus:ring-violet-500"
                   }`} />
                 {errors.full_name && <p className="mt-1 text-xs text-red-500">{errors.full_name}</p>}
               </div>
@@ -464,8 +464,8 @@ export default function SalesTeamPage() {
                 <input type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)}
                   placeholder="e.g. john@watchestraders.com"
                   autoComplete="off"
-                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-theme-text bg-theme-bg placeholder-theme-text-muted focus:outline-none focus:ring-1 ${
-                    errors.email ? "border-red-500 focus:ring-red-500" : "border-theme-border focus:border-violet-500 focus:ring-violet-500"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg placeholder-theme-text-muted focus:outline-none focus:ring-1 ${
+                    errors.email ? "border-red-500 focus:ring-red-500" : "border-slate-300 dark:border-theme-border focus:border-violet-500 focus:ring-violet-500"
                   }`} />
                 {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
               </div>
@@ -479,8 +479,8 @@ export default function SalesTeamPage() {
                   <input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => updateField("password", e.target.value)}
                     placeholder={editingUser ? "••••••••" : "Min. 8 characters"}
                     autoComplete="new-password"
-                    className={`w-full rounded-xl border px-4 py-2.5 pr-10 text-sm text-theme-text bg-theme-bg placeholder-theme-text-muted focus:outline-none focus:ring-1 ${
-                      errors.password ? "border-red-500 focus:ring-red-500" : "border-theme-border focus:border-violet-500 focus:ring-violet-500"
+                    className={`w-full rounded-xl border px-4 py-2.5 pr-10 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg placeholder-theme-text-muted focus:outline-none focus:ring-1 ${
+                      errors.password ? "border-red-500 focus:ring-red-500" : "border-slate-300 dark:border-theme-border focus:border-violet-500 focus:ring-violet-500"
                     }`} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-text-muted hover:text-theme-text">
@@ -495,7 +495,7 @@ export default function SalesTeamPage() {
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Phone Number</label>
                 <input type="text" value={form.phone} onChange={(e) => updateField("phone", e.target.value)}
                   placeholder="e.g. +62 812 3456 7890"
-                  className="w-full rounded-xl border border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg placeholder-theme-text-muted focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
+                  className="w-full rounded-xl border border-slate-300 dark:border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg placeholder-theme-text-muted focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
               </div>
 
               <div className="my-2 border-t border-theme-border" />
@@ -504,8 +504,8 @@ export default function SalesTeamPage() {
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Role *</label>
                 <select value={form.role_id} onChange={(e) => updateField("role_id", e.target.value)}
-                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-theme-text bg-theme-bg focus:outline-none focus:ring-1 ${
-                    errors.role_id ? "border-red-500 focus:ring-red-500" : "border-theme-border focus:border-violet-500 focus:ring-violet-500"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg focus:outline-none focus:ring-1 ${
+                    errors.role_id ? "border-red-500 focus:ring-red-500" : "border-slate-300 dark:border-theme-border focus:border-violet-500 focus:ring-violet-500"
                   }`}>
                   <option value="">Select a role...</option>
                   {roles.map((r) => <option key={r.id} value={r.id}>{r.name} — {r.description || `Level ${r.level}`}</option>)}
@@ -517,7 +517,7 @@ export default function SalesTeamPage() {
               <div ref={companyDropdownRef} className="relative">
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Company</label>
                 <button type="button" onClick={() => setCompanyDropdownOpen(!companyDropdownOpen)}
-                  className="flex w-full items-center justify-between rounded-xl border border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 transition-colors">
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-300 dark:border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 transition-colors">
                   <span className={form.company_ids.length === 0 ? "text-theme-text-muted" : ""}>
                     {getCompanyLabel()}
                   </span>
@@ -576,7 +576,7 @@ export default function SalesTeamPage() {
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Outlet / Branch</label>
                 <select value={form.outlet_id} onChange={(e) => updateField("outlet_id", e.target.value)}
                   disabled={form.company_ids.length === 0}
-                  className="w-full rounded-xl border border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                  className="w-full rounded-xl border border-slate-300 dark:border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50 disabled:cursor-not-allowed">
                   <option value="">{form.company_ids.length > 0 ? "Select outlet..." : "Select a company first"}</option>
                   {filteredOutlets.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                 </select>
@@ -586,7 +586,7 @@ export default function SalesTeamPage() {
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-theme-text-muted uppercase tracking-wide">Status</label>
                 <select value={form.status} onChange={(e) => updateField("status", e.target.value)}
-                  className="w-full rounded-xl border border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500">
+                  className="w-full rounded-xl border border-slate-300 dark:border-theme-border px-4 py-2.5 text-sm text-theme-text bg-theme-bg-card dark:bg-theme-bg focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500">
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                   <option value="suspended">Suspended</option>

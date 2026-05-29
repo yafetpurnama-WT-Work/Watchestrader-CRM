@@ -162,6 +162,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/lead-sources/{id}', [MasterDataController::class, 'updateLeadSource']);
     Route::delete('/lead-sources/{id}', [MasterDataController::class, 'destroyLeadSource']);
 
+    // Lead Statuses (master data)
+    Route::get('/lead-statuses', [\App\Http\Controllers\Api\LeadStatusController::class, 'index']);
+    Route::post('/lead-statuses', [\App\Http\Controllers\Api\LeadStatusController::class, 'store']);
+    Route::put('/lead-statuses/{id}', [\App\Http\Controllers\Api\LeadStatusController::class, 'update']);
+    Route::delete('/lead-statuses/{id}', [\App\Http\Controllers\Api\LeadStatusController::class, 'destroy']);
+    Route::post('/lead-statuses/reorder', [\App\Http\Controllers\Api\LeadStatusController::class, 'reorder']);
+
     // Indonesia Address API (cascading dropdown)
     Route::get('/indonesia/provinces', [MasterDataController::class, 'provinces']);
     Route::get('/indonesia/cities', [MasterDataController::class, 'cities']);
