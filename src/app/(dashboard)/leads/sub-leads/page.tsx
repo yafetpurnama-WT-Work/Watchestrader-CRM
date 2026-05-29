@@ -182,6 +182,8 @@ export default function SubLeadsPage() {
         <div className="w-full sm:w-1/3">
           <label className="mb-1 block text-sm font-medium text-theme-text-secondary">Select Lead (Parent)</label>
           <select
+            title="Select Lead"
+            aria-label="Select Lead"
             value={selectedLeadId}
             onChange={(e) => setSelectedLeadId(e.target.value)}
             className="w-full rounded-lg border border-theme-border bg-theme-bg-secondary px-3 py-2 text-sm text-theme-text focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
@@ -294,6 +296,8 @@ export default function SubLeadsPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium text-theme-text-secondary">Status</label>
                 <select
+                  title="Select Status"
+                  aria-label="Select Status"
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full rounded-lg border border-theme-border bg-theme-bg-secondary px-3 py-2 text-sm text-theme-text focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
