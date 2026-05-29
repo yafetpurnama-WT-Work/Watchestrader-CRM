@@ -273,7 +273,7 @@ export function Sidebar({
 
           {/* ── Main navigation ── */}
           <nav className="flex-1 overflow-y-auto px-2 py-3">
-            <div role="list" className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               {filteredNavItems.map((item) => {
                 if (item.children) {
                   const isActive = item.children.some(child => pathname === child.href);
@@ -351,7 +351,7 @@ export function Sidebar({
                   );
 
                   return (
-                    <div role="listitem" key={item.label} className="flex justify-center w-full">
+                    <div key={item.label} className="flex justify-center w-full">
                       {collapsed ? (
                         <DropdownMenu>
                           <Tooltip>
@@ -446,7 +446,7 @@ export function Sidebar({
                 );
 
                 return (
-                  <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
+                  <div key={item.href || item.label} className="flex justify-center w-full">
                     {collapsed ? (
                       <Tooltip>
                         <div className="hidden lg:flex w-full justify-center">
@@ -478,7 +478,7 @@ export function Sidebar({
                 >
                   Report
                 </p>
-                <div role="list" className="flex flex-col gap-1 mb-3">
+                <div className="flex flex-col gap-1 mb-3">
                   {filteredReportItems.map((item) => {
                     const isActive = pathname === item.href;
                     const linkContent = (
@@ -505,7 +505,7 @@ export function Sidebar({
                     );
 
                     return (
-                      <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
+                      <div key={item.href || item.label} className="flex justify-center w-full">
                         {collapsed ? (
                           <Tooltip>
                             <div className="hidden lg:flex w-full justify-center">
@@ -539,7 +539,7 @@ export function Sidebar({
                   {/* Management */}
                 </p>
 
-                <div role="list" className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   {filteredMasterItemsMenu.map((item) => {
                     if (item.children) {
                       const isActive = item.children.some(child => pathname === child.href);
@@ -616,7 +616,7 @@ export function Sidebar({
                       );
 
                       return (
-                        <div role="listitem" key={item.label} className="flex justify-center w-full">
+                        <div key={item.label} className="flex justify-center w-full">
                           {collapsed ? (
                             <DropdownMenu>
                               <Tooltip>
@@ -696,7 +696,7 @@ export function Sidebar({
                     );
 
                     return (
-                      <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
+                      <div key={item.href || item.label} className="flex justify-center w-full">
                         {collapsed ? (
                           <Tooltip>
                             <div className="hidden lg:flex w-full justify-center">
@@ -730,7 +730,7 @@ export function Sidebar({
                   SETUP
                 </p>
 
-                <div role="list" className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   {filteredSetupItems.map((item) => {
                     const isActive =
                       pathname === item.href ||
@@ -760,7 +760,7 @@ export function Sidebar({
                     );
 
                     return (
-                      <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
+                      <div key={item.href || item.label} className="flex justify-center w-full">
                         {collapsed ? (
                           <Tooltip>
                             <div className="hidden lg:flex w-full justify-center">

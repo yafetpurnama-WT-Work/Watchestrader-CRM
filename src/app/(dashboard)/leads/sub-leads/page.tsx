@@ -284,11 +284,11 @@ export default function SubLeadsPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium text-theme-text-secondary">Value (Rp)</label>
                 <input
-                  type="number"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  type="text"
+                  value={value ? new Intl.NumberFormat("id-ID").format(Number(value)) : ""}
+                  onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
                   className="w-full rounded-lg border border-theme-border bg-theme-bg-secondary px-3 py-2 text-sm text-theme-text focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
-                  placeholder="0"
+                  placeholder="e.g. 15.000.000"
                 />
               </div>
               <div>
