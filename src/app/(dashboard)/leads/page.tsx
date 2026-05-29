@@ -72,6 +72,7 @@ export default function LeadsPage() {
   const [perPage, setPerPage] = useState(10);
 
   // Modal states
+  const [viewingLead, setViewingLead] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingLead, setEditingLead] = useState<any>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
@@ -403,7 +404,7 @@ export default function LeadsPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button title="View lead" aria-label="View lead" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
+                          <button onClick={() => setViewingLead(l)} title="View lead" aria-label="View lead" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text">
                             <Eye className="h-4 w-4" />
                           </button>
                           {can("leads.update") && (
@@ -525,6 +526,92 @@ export default function LeadsPage() {
               <button onClick={handleDelete} disabled={deleting} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
                 {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* View Lead Detail Modal */}
+      {viewingLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button type="button" aria-label="Close modal" onClick={() => setViewingLead(null)} className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" />
+          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-theme-bg-card shadow-2xl border border-theme-border overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-theme-border px-6 py-4 bg-theme-bg-secondary/30">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600">
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-theme-text">Lead Details</h2>
+                  <p className="text-xs text-theme-text-muted">ID: {viewingLead.id}</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setViewingLead(null)} title="Close modal" aria-label="Close modal" className="rounded-lg p-1.5 text-theme-text-muted hover:bg-theme-bg-hover hover:text-theme-text transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Header Info */}
+              <div className="text-center pb-4 border-b border-theme-border">
+                <h3 className="text-xl font-bold text-theme-text mb-2">{viewingLead.title}</h3>
+                <div className="flex items-center justify-center gap-3">
+                  <span className="text-2xl font-black text-theme-text">
+                    {formatCurrency(viewingLead.value || 0)}
+                  </span>
+                  {(() => {
+                    const cfg = statusList.find(s => s.id === viewingLead.status_id) || { name: 'Unknown', color: '#6B7280' };
+                    return (
+                      <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm" style={{ backgroundColor: cfg.color + '15', color: cfg.color, border: `1px solid ${cfg.color}30` }}>
+                        {cfg.name}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Grid Info */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                <div>
+                  <p className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-1.5">Customer</p>
+                  <p className="text-sm font-semibold text-theme-text">{viewingLead.customer?.name || "—"}</p>
+                  {viewingLead.customer?.phone && <p className="text-xs text-theme-text-muted mt-0.5">{viewingLead.customer.phone}</p>}
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-1.5">Assigned Sales</p>
+                  <p className="text-sm font-semibold text-theme-text">{viewingLead.assigned_to_user?.full_name || (viewingLead.assigned_to ? "Assigned" : "—")}</p>
+                  {viewingLead.assigned_to_user?.email && <p className="text-xs text-theme-text-muted mt-0.5">{viewingLead.assigned_to_user.email}</p>}
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-1.5">Company / Outlet</p>
+                  <p className="text-sm font-semibold text-theme-text">{viewingLead.company?.name || "—"}</p>
+                  {viewingLead.outlet?.name && <p className="text-xs text-theme-text-muted mt-0.5">{viewingLead.outlet.name}</p>}
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-1.5">Source</p>
+                  {viewingLead.source ? (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${viewingLead.source.color}15`, color: viewingLead.source.color }}>
+                      {viewingLead.source.name}
+                    </span>
+                  ) : <p className="text-sm text-theme-text-muted">—</p>}
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-1.5">Sub-Leads</p>
+                  <p className="text-sm font-semibold text-theme-text">{viewingLead.sub_leads_count ?? 0} active item(s)</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-theme-text-muted uppercase tracking-wider mb-1.5">Created At</p>
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-theme-text">
+                    <Clock className="h-3.5 w-3.5 text-theme-text-muted" />
+                    {new Date(viewingLead.created_at).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-t border-theme-border bg-theme-bg-secondary/30 px-6 py-4 flex justify-end">
+              <button onClick={() => setViewingLead(null)} className="rounded-xl bg-theme-bg-card border border-theme-border px-5 py-2 text-sm font-medium text-theme-text hover:bg-theme-bg-hover transition-colors shadow-sm">
+                Close
               </button>
             </div>
           </div>
