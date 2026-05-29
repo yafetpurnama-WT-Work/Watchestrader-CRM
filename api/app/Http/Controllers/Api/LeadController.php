@@ -229,31 +229,131 @@ class LeadController extends Controller
         try {
             $query = Lead::byVisibility($request->user());
 
+            if ($companyId = $request->query('company_id')) {
+                $query->where('leads.company_id', $companyId);
+            }
             if ($outletId = $request->query('outlet_id')) {
-                $query->where('outlet_id', $outletId);
+                $query->where('leads.outlet_id', $outletId);
             }
             if ($dateFrom = $request->query('date_from')) {
-                $query->whereDate('created_at', '>=', $dateFrom);
+                $query->whereDate('leads.created_at', '>=', $dateFrom);
             }
             if ($dateTo = $request->query('date_to')) {
-                $query->whereDate('created_at', '<=', $dateTo);
+                $query->whereDate('leads.created_at', '<=', $dateTo);
             }
 
-            $total = (clone $query)->count();
-            $newLeads = (clone $query)->whereHas('status', fn($q) => $q->where('slug', 'cold'))->count();
-            $inWork = (clone $query)->whereHas('status', fn($q) => $q->whereIn('slug', ['mql', 'hot']))->count();
-            $deals = (clone $query)->whereHas('status', fn($q) => $q->where('slug', 'deal-won'))->count();
-            $junk = (clone $query)->whereHas('status', fn($q) => $q->where('slug', 'junk'))->count();
+            // 1. Summary
+            $totalLeads = (clone $query)->count();
+            
+            $wonLeadsQuery = (clone $query)->whereHas('status', fn($q) => $q->where('slug', 'deal-won'));
+            $totalWon = $wonLeadsQuery->count();
+            $totalRevenue = $wonLeadsQuery->sum('value');
+            
+            $winRate = $totalLeads > 0 ? round(($totalWon / $totalLeads) * 100, 1) : 0;
+            $activePipelines = \App\Models\Pipeline::count(); // Use total pipelines
+
+            // 2. Charts
+            $byStatus = (clone $query)
+                ->join('lead_statuses', 'leads.status_id', '=', 'lead_statuses.id')
+                ->selectRaw('lead_statuses.name, count(leads.id) as count')
+                ->groupBy('lead_statuses.name')
+                ->get();
+
+            $bySource = (clone $query)
+                ->join('lead_sources', 'leads.source_id', '=', 'lead_sources.id')
+                ->selectRaw('lead_sources.name, count(leads.id) as value')
+                ->groupBy('lead_sources.name')
+                ->get();
+
+            $trend = (clone $query)
+                ->selectRaw('DATE_FORMAT(leads.created_at, "%b") as month, MONTH(leads.created_at) as month_num, count(leads.id) as leads, sum(leads.value) as revenue')
+                ->groupBy('month', 'month_num')
+                ->orderBy('month_num')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'month' => $item->month,
+                        'leads' => $item->leads,
+                        'revenue' => (float) $item->revenue,
+                    ];
+                })
+                ->values();
+
+            // 3. Table
+            $table = (clone $query)
+                ->join('lead_sources', 'leads.source_id', '=', 'lead_sources.id')
+                ->leftJoin('lead_statuses', 'leads.status_id', '=', 'lead_statuses.id')
+                ->selectRaw('
+                    lead_sources.name as source,
+                    count(leads.id) as leads,
+                    sum(case when lead_statuses.slug = "deal-won" then 1 else 0 end) as won,
+                    sum(case when lead_statuses.slug = "deal-won" then leads.value else 0 end) as revenue
+                ')
+                ->groupBy('lead_sources.name')
+                ->get()
+                ->map(function ($item) {
+                    $leads = (int) $item->leads;
+                    $won = (int) $item->won;
+                    return [
+                        'source' => $item->source,
+                        'leads' => $leads,
+                        'won' => $won,
+                        'conversion' => $leads > 0 ? round(($won / $leads) * 100, 1) : 0,
+                        'revenue' => (float) $item->revenue,
+                    ];
+                });
+
+            // 4. Sales KPI (for export) — detailed per-status breakdown
+            $salesKpi = (clone $query)
+                ->leftJoin('users', 'leads.assigned_to', '=', 'users.id')
+                ->leftJoin('lead_statuses', 'leads.status_id', '=', 'lead_statuses.id')
+                ->selectRaw('
+                    COALESCE(users.full_name, "Unassigned") as sales_name,
+                    count(leads.id) as total,
+                    sum(case when lead_statuses.slug = "cold" then 1 else 0 end) as new_leads,
+                    sum(case when lead_statuses.slug in ("mql", "hot") then 1 else 0 end) as in_work,
+                    sum(case when lead_statuses.slug = "deal-won" then 1 else 0 end) as won,
+                    sum(case when lead_statuses.slug = "junk" then 1 else 0 end) as lost,
+                    sum(case when lead_statuses.slug = "deal-won" then leads.value else 0 end) as revenue,
+                    COALESCE(users.email, "-") as sales_email
+                ')
+                ->groupBy('sales_name', 'sales_email')
+                ->orderByRaw('won DESC, total DESC')
+                ->get()
+                ->values()
+                ->map(function ($item, $index) {
+                    $total = (int) $item->total;
+                    $won = (int) $item->won;
+                    return [
+                        'rank' => $index + 1,
+                        'sales_name' => $item->sales_name,
+                        'sales_email' => $item->sales_email,
+                        'new_leads' => (int) $item->new_leads,
+                        'in_work' => (int) $item->in_work,
+                        'won' => $won,
+                        'lost' => (int) $item->lost,
+                        'total' => $total,
+                        'conversion' => $total > 0 ? round(($won / $total) * 100, 1) : 0,
+                        'revenue' => (float) $item->revenue,
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'total_leads' => $total,
-                    'new_leads' => $newLeads,
-                    'in_work' => $inWork,
-                    'deals' => $deals,
-                    'junk' => $junk,
-                    'conversion_rate' => $total > 0 ? round(($deals / $total) * 100, 1) : 0,
+                    'summary' => [
+                        'totalLeads' => $totalLeads,
+                        'winRate' => $winRate,
+                        'totalRevenue' => (float) $totalRevenue,
+                        'activePipelines' => $activePipelines,
+                    ],
+                    'charts' => [
+                        'byStatus' => $byStatus,
+                        'bySource' => $bySource,
+                        'trend' => $trend,
+                    ],
+                    'table' => $table,
+                    'sales_kpi' => $salesKpi,
                 ],
                 'message' => 'Lead report retrieved.',
             ]);

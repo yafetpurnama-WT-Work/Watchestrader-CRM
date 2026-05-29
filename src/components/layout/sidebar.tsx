@@ -36,6 +36,8 @@ import {
   List,
   Network,
   CheckCircle,
+  BarChart3,
+  Layers,
 } from "lucide-react";
 import {
   Avatar,
@@ -74,6 +76,10 @@ const navItems: NavItem[] = [
   { href: "/automations", label: "Automations", icon: Zap },
 ];
 
+const reportItems: NavItem[] = [
+  { href: "/leads/report", label: "Leads Report", icon: BarChart3 },
+];
+
 const managementItems: NavItem[] = [
   { href: "/users", label: "Users", icon: Users },
   { href: "/company", label: "Company", icon: Building2 },
@@ -90,6 +96,7 @@ const managementItems: NavItem[] = [
     icon: Target,
     children: [
       { href: "/leads", label: "Data Leads", icon: List },
+      { href: "/leads/sub-leads", label: "Sub-Leads", icon: Layers },
       { href: "/leads/sources", label: "Sources", icon: Network },
       { href: "/leads/statuses", label: "Statuses", icon: CheckCircle },
     ],
@@ -124,9 +131,21 @@ export function Sidebar({
   const { theme, toggleTheme } = useTheme();
   const totalUnread = useTotalUnread();
 
-  const [customerOpen, setCustomerOpen] = useState(
-    pathname === "/customers" || pathname === "/contacts"
-  );
+  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>(() => {
+    return {
+      Customer: pathname === "/customers" || pathname === "/contacts",
+      Leads: pathname?.startsWith("/leads"),
+    };
+  });
+
+  const toggleAccordion = (label: string) => {
+    setOpenAccordions(prev => {
+      const isCurrentlyOpen = prev[label];
+      return {
+        [label]: !isCurrentlyOpen
+      };
+    });
+  };
 
   useEffect(() => {
     onClose?.();
@@ -154,6 +173,11 @@ export function Sidebar({
     return true;
   });
 
+  const filteredReportItems = reportItems.filter((item) => {
+    if (item.href === "/leads/report") return can("leads.view");
+    return false;
+  });
+
   const filteredMasterItemsMenu = managementItems.filter((item) => {
     if (item.children) {
       return can("customers.view");
@@ -163,6 +187,7 @@ export function Sidebar({
       case "/company": return can("companies.view") || can("outlets.view");
       case "/customers": return can("customers.view");
       case "/leads": return can("leads.view");
+      case "/leads/sub-leads": return can("leads.view");
       case "/leads/sources": return can("leads.view");
       case "/leads/statuses": return can("leads.view");
       case "/products": return can("products.view");
@@ -251,25 +276,26 @@ export function Sidebar({
             <div role="list" className="flex flex-col gap-1">
               {filteredNavItems.map((item) => {
                 if (item.children) {
-                  const isActive = pathname === "/customers" || pathname === "/contacts";
+                  const isActive = item.children.some(child => pathname === child.href);
+                  const isOpen = openAccordions[item.label] || false;
 
                   const groupContent = (
                     <div className="flex w-full flex-col gap-1">
                       <div
                         role="button"
                         tabIndex={0}
-                        aria-label={`${customerOpen ? "Collapse" : "Expand"} ${item.label}`}
-                        onClick={() => setCustomerOpen(!customerOpen)}
+                        aria-label={`${isOpen ? "Collapse" : "Expand"} ${item.label}`}
+                        onClick={() => toggleAccordion(item.label)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
-                            setCustomerOpen(!customerOpen);
+                            toggleAccordion(item.label);
                             e.preventDefault();
                           }
                         }}
                         className={cn(
                           "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer",
                           collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
-                          isActive && !customerOpen
+                          isActive && !isOpen
                             ? "bg-violet-500/10 text-violet-500"
                             : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
                         )}
@@ -285,7 +311,7 @@ export function Sidebar({
                         </span>
                         {/* MOBILE LAYOUT SIDE BAR ↓ */}
                         <div className={cn("shrink-0 transition-transform duration-200", collapsed && "lg:hidden")}>
-                          {customerOpen ? (
+                          {isOpen ? (
                             <ChevronDown className="h-4 w-4" />
                           ) : (
                             <ChevronRight className="h-4 w-4" />
@@ -297,7 +323,7 @@ export function Sidebar({
                       <div
                         className={cn(
                           "flex flex-col gap-1 overflow-hidden transition-all duration-200 ease-in-out",
-                          customerOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
+                          isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0",
                           collapsed && "lg:hidden"
                         )}
                       >
@@ -441,6 +467,65 @@ export function Sidebar({
 
             <div className="my-3 border-t border-theme-border" />
 
+            {/* REPORT section */}
+            {filteredReportItems.length > 0 && (
+              <>
+                <p
+                  className={cn(
+                    "mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-theme-text-muted",
+                    collapsed && "lg:hidden",
+                  )}
+                >
+                  Report
+                </p>
+                <div role="list" className="flex flex-col gap-1 mb-3">
+                  {filteredReportItems.map((item) => {
+                    const isActive = pathname === item.href;
+                    const linkContent = (
+                      <Link
+                        href={item.href || "#"}
+                        className={cn(
+                          "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                          collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
+                          isActive
+                            ? "bg-violet-500/10 text-violet-500"
+                            : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span
+                          className={cn(
+                            "flex-1 truncate text-left transition-opacity duration-200",
+                            collapsed && "lg:hidden",
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      </Link>
+                    );
+
+                    return (
+                      <div role="listitem" key={item.href || item.label} className="flex justify-center w-full">
+                        {collapsed ? (
+                          <Tooltip>
+                            <div className="hidden lg:flex w-full justify-center">
+                              <TooltipTrigger render={linkContent} />
+                            </div>
+                            <TooltipContent side="right" sideOffset={8}>
+                              {item.label}
+                            </TooltipContent>
+                            <div className="lg:hidden w-full">{linkContent}</div>
+                          </Tooltip>
+                        ) : (
+                          linkContent
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
             {filteredMasterItemsMenu.length > 0 && (
               <>
                 {/* Management section label */}
@@ -457,25 +542,26 @@ export function Sidebar({
                 <div role="list" className="flex flex-col gap-1">
                   {filteredMasterItemsMenu.map((item) => {
                     if (item.children) {
-                      const isActive = pathname === "/customers" || pathname === "/contacts";
+                      const isActive = item.children.some(child => pathname === child.href);
+                      const isOpen = openAccordions[item.label] || false;
 
                       const groupContent = (
                         <div className="flex w-full flex-col gap-1">
                           <div
                             role="button"
                             tabIndex={0}
-                            aria-label={`${customerOpen ? "Collapse" : "Expand"} ${item.label}`}
-                            onClick={() => setCustomerOpen(!customerOpen)}
+                            aria-label={`${isOpen ? "Collapse" : "Expand"} ${item.label}`}
+                            onClick={() => toggleAccordion(item.label)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
-                                setCustomerOpen(!customerOpen);
+                                toggleAccordion(item.label);
                                 e.preventDefault();
                               }
                             }}
                             className={cn(
                               "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer",
                               collapsed && "lg:justify-center lg:px-0 lg:w-10 lg:h-10 lg:p-0 lg:mx-auto",
-                              isActive && !customerOpen
+                              isActive && !isOpen
                                 ? "bg-violet-500/10 text-violet-500"
                                 : "text-theme-text-secondary hover:bg-theme-bg-hover hover:text-theme-text",
                             )}
@@ -490,7 +576,7 @@ export function Sidebar({
                               {item.label}
                             </span>
                             <div className={cn("shrink-0 transition-transform duration-200", collapsed && "lg:hidden")}>
-                              {customerOpen ? (
+                              {isOpen ? (
                                 <ChevronDown className="h-4 w-4" />
                               ) : (
                                 <ChevronRight className="h-4 w-4" />
@@ -502,7 +588,7 @@ export function Sidebar({
                           <div
                             className={cn(
                               "flex flex-col gap-1 overflow-hidden transition-all duration-200 ease-in-out",
-                              customerOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
+                              isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0",
                               collapsed && "lg:hidden"
                             )}
                           >

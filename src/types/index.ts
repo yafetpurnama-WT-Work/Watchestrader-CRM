@@ -625,8 +625,7 @@ export interface SubLead {
   title: string;
   notes?: string;
   value: number;
-  status_id: string;
-  status?: LeadStatus;
+  status: string;
   product?: Product;
   created_by?: string;
   created_at: string;

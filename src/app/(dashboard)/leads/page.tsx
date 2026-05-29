@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useCallback, useEffect, useState } from "react";
 import {
   Target,
@@ -385,9 +387,13 @@ export default function LeadsPage() {
                         {(l as any).assigned_to_user?.full_name || (l.assigned_to ? "Assigned" : "—")}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-theme-bg-secondary text-xs font-medium text-theme-text-secondary">
+                        <Link 
+                          href={`/leads/sub-leads?lead_id=${l.id}`}
+                          className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-theme-bg-secondary text-xs font-medium text-theme-text-secondary hover:bg-violet-500 hover:text-white transition-colors"
+                          title="View Sub-Leads"
+                        >
                           {l.sub_leads_count ?? 0}
-                        </span>
+                        </Link>
                       </td>
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-1 text-xs text-theme-text-muted">

@@ -109,19 +109,19 @@ class Lead extends Model
             $subordinateIds = User::where('supervisor_id', $user->id)->pluck('id');
 
             return $query->where(function ($q) use ($user, $subordinateIds) {
-                $q->where('assigned_to', $user->id)
-                    ->orWhere('created_by', $user->id)
-                    ->orWhereIn('assigned_to', $subordinateIds);
+                $q->where('leads.assigned_to', $user->id)
+                    ->orWhere('leads.created_by', $user->id)
+                    ->orWhereIn('leads.assigned_to', $subordinateIds);
             })->where(function ($q) use ($user) {
-                $q->where('company_id', $user->company_id)
-                    ->where('outlet_id', $user->outlet_id);
+                $q->where('leads.company_id', $user->company_id)
+                    ->where('leads.outlet_id', $user->outlet_id);
             });
         }
 
         // Staff → only own leads
         return $query->where(function ($q) use ($user) {
-            $q->where('assigned_to', $user->id)
-                ->orWhere('created_by', $user->id);
+            $q->where('leads.assigned_to', $user->id)
+                ->orWhere('leads.created_by', $user->id);
         });
     }
 
